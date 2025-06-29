@@ -1,91 +1,62 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, Plus, Clock, Zap, Target, Filter } from 'lucide-react-native';
+import { Search, Plus, Clock, Zap, Target, Filter, Dumbbell as Equipment } from 'lucide-react-native';
+import { useExercises } from '@/hooks/useExercises';
+import { useEquipment } from '@/hooks/useEquipment';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { ErrorMessage } from '@/components/ErrorMessage';
 
-interface Exercise {
-  id: string;
-  name: string;
-  category: string;
-  duration: string;
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  muscleGroups: string[];
-}
-
-const exercises: Exercise[] = [
-  {
-    id: '1',
-    name: 'Push-ups',
-    category: 'Upper Body',
-    duration: '3 sets × 12 reps',
-    difficulty: 'Beginner',
-    muscleGroups: ['Chest', 'Triceps', 'Shoulders']
-  },
-  {
-    id: '2',
-    name: 'Pull-ups',
-    category: 'Upper Body',
-    duration: '3 sets × 8 reps',
-    difficulty: 'Intermediate',
-    muscleGroups: ['Back', 'Biceps']
-  },
-  {
-    id: '3',
-    name: 'Squats',
-    category: 'Lower Body',
-    duration: '4 sets × 15 reps',
-    difficulty: 'Beginner',
-    muscleGroups: ['Quadriceps', 'Glutes']
-  },
-  {
-    id: '4',
-    name: 'Deadlifts',
-    category: 'Lower Body',
-    duration: '3 sets × 6 reps',
-    difficulty: 'Advanced',
-    muscleGroups: ['Hamstrings', 'Glutes', 'Back']
-  },
-  {
-    id: '5',
-    name: 'Plank',
-    category: 'Core',
-    duration: '3 sets × 60s',
-    difficulty: 'Beginner',
-    muscleGroups: ['Core', 'Shoulders']
-  },
-  {
-    id: '6',
-    name: 'Burpees',
-    category: 'Cardio',
-    duration: '4 sets × 10 reps',
-    difficulty: 'Advanced',
-    muscleGroups: ['Full Body']
-  }
-];
-
-const categories = ['All', 'Upper Body', 'Lower Body', 'Core', 'Cardio'];
+const muscleGroups = ['All', 'Chest', 'Back', 'Shoulders', 'Arms', 'Legs', 'Core', 'Cardio'];
 
 export default function WorkoutsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedEquipment, setSelectedEquipment] = useState('All');
+  const [showFilters, setShowFilters] = useState(false);
+
+  const { exercises, loading: exercisesLoading, error: exercisesError, refetch: refetchExercises } = useExercises();
+  const { equipment, loading: equipmentLoading, error: equipmentError } = useEquipment();
+
+  const loading = exercisesLoading || equipmentLoading;
+  const error = exercisesError || equipmentError;
 
   const filteredExercises = exercises.filter(exercise => {
     const matchesSearch = exercise.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         exercise.muscleGroups.some(group => 
-                           group.toLowerCase().includes(searchQuery.toLowerCase())
+                         (exercise.primary_muscles || []).some(muscle => 
+                           muscle.toLowerCase().includes(searchQuery.toLowerCase())
+                         ) ||
+                         (exercise.secondary_muscles || []).some(muscle => 
+                           muscle.toLowerCase().includes(searchQuery.toLowerCase())
                          );
-    const matchesCategory = selectedCategory === 'All' || exercise.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    
+    const matchesCategory = selectedCategory === 'All' || exercise.muscle_group === selectedCategory;
+    
+    const matchesEquipment = selectedEquipment === 'All' || 
+                            exercise.equipment_data?.name === selectedEquipment ||
+                            (selectedEquipment === 'Bodyweight' && !exercise.equipment_data);
+    
+    return matchesSearch && matchesCategory && matchesEquipment;
   });
 
   const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'Beginner': return '#059669';
-      case 'Intermediate': return '#EA580C';
-      case 'Advanced': return '#DC2626';
+    switch (difficulty.toLowerCase()) {
+      case 'beginner': return '#059669';
+      case 'intermediate': return '#EA580C';
+      case 'advanced': return '#DC2626';
       default: return '#64748B';
     }
   };
+
+  const equipmentOptions = ['All', 'Bodyweight', ...equipment.map(eq => eq.name)];
+
+  if (loading) {
+    return <LoadingSpinner message="Loading exercises..." />;
+  }
+
+  if (error) {
+    return <ErrorMessage message={error} onRetry={refetchExercises} />;
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -108,81 +79,160 @@ export default function WorkoutsScreen() {
             placeholderTextColor="#94A3B8"
           />
         </View>
-        <TouchableOpacity style={styles.filterButton}>
-          <Filter size={20} color="#64748B" />
+        <TouchableOpacity 
+          style={[styles.filterButton, showFilters && styles.activeFilterButton]}
+          onPress={() => setShowFilters(!showFilters)}
+        >
+          <Filter size={20} color={showFilters ? "#FFFFFF" : "#64748B"} />
         </TouchableOpacity>
       </View>
 
-      {/* Category Filter */}
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        style={styles.categoryContainer}
-        contentContainerStyle={styles.categoryContent}
-      >
-        {categories.map((category) => (
-          <TouchableOpacity
-            key={category}
-            style={[
-              styles.categoryButton,
-              selectedCategory === category && styles.activeCategoryButton
-            ]}
-            onPress={() => setSelectedCategory(category)}
+      {/* Filters */}
+      {showFilters && (
+        <View style={styles.filtersContainer}>
+          {/* Muscle Group Filter */}
+          <Text style={styles.filterTitle}>Muscle Groups</Text>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            style={styles.filterScroll}
+            contentContainerStyle={styles.filterContent}
           >
-            <Text style={[
-              styles.categoryText,
-              selectedCategory === category && styles.activeCategoryText
-            ]}>
-              {category}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+            {muscleGroups.map((category) => (
+              <TouchableOpacity
+                key={category}
+                style={[
+                  styles.filterButton,
+                  selectedCategory === category && styles.activeFilterButton
+                ]}
+                onPress={() => setSelectedCategory(category)}
+              >
+                <Text style={[
+                  styles.filterText,
+                  selectedCategory === category && styles.activeFilterText
+                ]}>
+                  {category}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {/* Equipment Filter */}
+          <Text style={styles.filterTitle}>Equipment</Text>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            style={styles.filterScroll}
+            contentContainerStyle={styles.filterContent}
+          >
+            {equipmentOptions.map((equipmentName) => (
+              <TouchableOpacity
+                key={equipmentName}
+                style={[
+                  styles.filterButton,
+                  selectedEquipment === equipmentName && styles.activeFilterButton
+                ]}
+                onPress={() => setSelectedEquipment(equipmentName)}
+              >
+                <Text style={[
+                  styles.filterText,
+                  selectedEquipment === equipmentName && styles.activeFilterText
+                ]}>
+                  {equipmentName}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       {/* Exercise List */}
       <ScrollView showsVerticalScrollIndicator={false} style={styles.exerciseList}>
-        {filteredExercises.map((exercise) => (
-          <TouchableOpacity key={exercise.id} style={styles.exerciseCard}>
-            <View style={styles.exerciseHeader}>
-              <View style={styles.exerciseInfo}>
-                <Text style={styles.exerciseName}>{exercise.name}</Text>
-                <Text style={styles.exerciseCategory}>{exercise.category}</Text>
-              </View>
-              <View style={[
-                styles.difficultyBadge,
-                { backgroundColor: getDifficultyColor(exercise.difficulty) + '20' }
-              ]}>
-                <Text style={[
-                  styles.difficultyText,
-                  { color: getDifficultyColor(exercise.difficulty) }
+        {filteredExercises.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Equipment size={48} color="#94A3B8" />
+            <Text style={styles.emptyTitle}>No exercises found</Text>
+            <Text style={styles.emptyMessage}>
+              Try adjusting your search or filter criteria
+            </Text>
+          </View>
+        ) : (
+          filteredExercises.map((exercise) => (
+            <TouchableOpacity key={exercise.id} style={styles.exerciseCard}>
+              <View style={styles.exerciseHeader}>
+                <View style={styles.exerciseImageContainer}>
+                  {exercise.thumbnail_url ? (
+                    <Image 
+                      source={{ uri: exercise.thumbnail_url }} 
+                      style={styles.exerciseImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={styles.exercisePlaceholder}>
+                      <Equipment size={24} color="#64748B" />
+                    </View>
+                  )}
+                </View>
+                
+                <View style={styles.exerciseInfo}>
+                  <Text style={styles.exerciseName}>{exercise.name}</Text>
+                  <Text style={styles.exerciseCategory}>{exercise.muscle_group}</Text>
+                  
+                  {exercise.equipment_data && (
+                    <View style={styles.equipmentTag}>
+                      <Equipment size={14} color="#64748B" />
+                      <Text style={styles.equipmentText}>{exercise.equipment_data.name}</Text>
+                    </View>
+                  )}
+                </View>
+                
+                <View style={[
+                  styles.difficultyBadge,
+                  { backgroundColor: getDifficultyColor(exercise.difficulty) + '20' }
                 ]}>
-                  {exercise.difficulty}
+                  <Text style={[
+                    styles.difficultyText,
+                    { color: getDifficultyColor(exercise.difficulty) }
+                  ]}>
+                    {exercise.difficulty}
+                  </Text>
+                </View>
+              </View>
+              
+              <View style={styles.exerciseDetails}>
+                {exercise.duration && (
+                  <View style={styles.detailItem}>
+                    <Clock size={16} color="#64748B" />
+                    <Text style={styles.detailText}>{exercise.duration}</Text>
+                  </View>
+                )}
+                
+                {(exercise.primary_muscles || exercise.secondary_muscles) && (
+                  <View style={styles.detailItem}>
+                    <Target size={16} color="#64748B" />
+                    <Text style={styles.detailText}>
+                      {[...(exercise.primary_muscles || []), ...(exercise.secondary_muscles || [])].join(', ')}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              
+              {exercise.proper_form && (
+                <Text style={styles.exerciseDescription} numberOfLines={2}>
+                  {exercise.proper_form}
                 </Text>
-              </View>
-            </View>
-            
-            <View style={styles.exerciseDetails}>
-              <View style={styles.detailItem}>
-                <Clock size={16} color="#64748B" />
-                <Text style={styles.detailText}>{exercise.duration}</Text>
-              </View>
-              <View style={styles.detailItem}>
-                <Target size={16} color="#64748B" />
-                <Text style={styles.detailText}>
-                  {exercise.muscleGroups.join(', ')}
-                </Text>
-              </View>
-            </View>
-            
-            <TouchableOpacity style={styles.startButton}>
-              <Zap size={16} color="#FFFFFF" />
-              <Text style={styles.startButtonText}>Start Exercise</Text>
+              )}
+              
+              <TouchableOpacity style={styles.startButton}>
+                <Zap size={16} color="#FFFFFF" />
+                <Text style={styles.startButtonText}>Start Exercise</Text>
+              </TouchableOpacity>
             </TouchableOpacity>
-          </TouchableOpacity>
-        ))}
+          ))
+        )}
       </ScrollView>
 
-      {/* Workout Templates */}
+      {/* Popular Workouts */}
       <View style={styles.templatesSection}>
         <Text style={styles.sectionTitle}>Popular Workouts</Text>
         <ScrollView 
@@ -191,29 +241,50 @@ export default function WorkoutsScreen() {
           contentContainerStyle={styles.templatesContainer}
         >
           <TouchableOpacity style={styles.templateCard}>
-            <Text style={styles.templateTitle}>Full Body HIIT</Text>
-            <Text style={styles.templateSubtitle}>30 min • 8 exercises</Text>
-            <View style={styles.templateStats}>
-              <Text style={styles.templateStat}>🔥 320 cal</Text>
-              <Text style={styles.templateStat}>⭐ 4.8</Text>
+            <Image 
+              source={{ uri: 'https://images.pexels.com/photos/416778/pexels-photo-416778.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&dpr=2' }}
+              style={styles.templateImage}
+              resizeMode="cover"
+            />
+            <View style={styles.templateContent}>
+              <Text style={styles.templateTitle}>Full Body HIIT</Text>
+              <Text style={styles.templateSubtitle}>30 min • 8 exercises</Text>
+              <View style={styles.templateStats}>
+                <Text style={styles.templateStat}>🔥 320 cal</Text>
+                <Text style={styles.templateStat}>⭐ 4.8</Text>
+              </View>
             </View>
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.templateCard}>
-            <Text style={styles.templateTitle}>Strength Builder</Text>
-            <Text style={styles.templateSubtitle}>45 min • 6 exercises</Text>
-            <View style={styles.templateStats}>
-              <Text style={styles.templateStat}>💪 Strength</Text>
-              <Text style={styles.templateStat}>⭐ 4.9</Text>
+            <Image 
+              source={{ uri: 'https://images.pexels.com/photos/1552252/pexels-photo-1552252.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&dpr=2' }}
+              style={styles.templateImage}
+              resizeMode="cover"
+            />
+            <View style={styles.templateContent}>
+              <Text style={styles.templateTitle}>Strength Builder</Text>
+              <Text style={styles.templateSubtitle}>45 min • 6 exercises</Text>
+              <View style={styles.templateStats}>
+                <Text style={styles.templateStat}>💪 Strength</Text>
+                <Text style={styles.templateStat}>⭐ 4.9</Text>
+              </View>
             </View>
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.templateCard}>
-            <Text style={styles.templateTitle}>Core Focus</Text>
-            <Text style={styles.templateSubtitle}>20 min • 5 exercises</Text>
-            <View style={styles.templateStats}>
-              <Text style={styles.templateStat}>🎯 Core</Text>
-              <Text style={styles.templateStat}>⭐ 4.7</Text>
+            <Image 
+              source={{ uri: 'https://images.pexels.com/photos/863977/pexels-photo-863977.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&dpr=2' }}
+              style={styles.templateImage}
+              resizeMode="cover"
+            />
+            <View style={styles.templateContent}>
+              <Text style={styles.templateTitle}>Core Focus</Text>
+              <Text style={styles.templateSubtitle}>20 min • 5 exercises</Text>
+              <View style={styles.templateStats}>
+                <Text style={styles.templateStat}>🎯 Core</Text>
+                <Text style={styles.templateStat}>⭐ 4.7</Text>
+              </View>
             </View>
           </TouchableOpacity>
         </ScrollView>
@@ -277,36 +348,60 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  categoryContainer: {
-    marginBottom: 20,
+  activeFilterButton: {
+    backgroundColor: '#2563EB',
   },
-  categoryContent: {
+  filtersContainer: {
     paddingHorizontal: 20,
+    paddingBottom: 16,
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 20,
+    marginBottom: 16,
+    borderRadius: 12,
+    paddingTop: 16,
+  },
+  filterTitle: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: '#1E293B',
+    marginBottom: 12,
+  },
+  filterScroll: {
+    marginBottom: 16,
+  },
+  filterContent: {
     gap: 12,
   },
-  categoryButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  activeCategoryButton: {
-    backgroundColor: '#2563EB',
-    borderColor: '#2563EB',
-  },
-  categoryText: {
+  filterText: {
     fontSize: 14,
     fontFamily: 'Inter-Medium',
     color: '#64748B',
   },
-  activeCategoryText: {
+  activeFilterText: {
     color: '#FFFFFF',
   },
   exerciseList: {
     flex: 1,
     paddingHorizontal: 20,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontFamily: 'Inter-SemiBold',
+    color: '#1E293B',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyMessage: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    color: '#64748B',
+    textAlign: 'center',
   },
   exerciseCard: {
     backgroundColor: '#FFFFFF',
@@ -321,9 +416,24 @@ const styles = StyleSheet.create({
   },
   exerciseHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 12,
+  },
+  exerciseImageContainer: {
+    marginRight: 12,
+  },
+  exerciseImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+  },
+  exercisePlaceholder: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   exerciseInfo: {
     flex: 1,
@@ -338,11 +448,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Inter-Regular',
     color: '#64748B',
+    marginBottom: 6,
+  },
+  equipmentTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  equipmentText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    color: '#64748B',
   },
   difficultyBadge: {
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
+    alignSelf: 'flex-start',
   },
   difficultyText: {
     fontSize: 12,
@@ -350,7 +472,7 @@ const styles = StyleSheet.create({
   },
   exerciseDetails: {
     gap: 8,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   detailItem: {
     flexDirection: 'row',
@@ -362,6 +484,13 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     color: '#64748B',
     flex: 1,
+  },
+  exerciseDescription: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#64748B',
+    lineHeight: 20,
+    marginBottom: 16,
   },
   startButton: {
     flexDirection: 'row',
@@ -398,12 +527,19 @@ const styles = StyleSheet.create({
     width: 200,
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 16,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+  },
+  templateImage: {
+    width: '100%',
+    height: 100,
+  },
+  templateContent: {
+    padding: 16,
   },
   templateTitle: {
     fontSize: 16,
