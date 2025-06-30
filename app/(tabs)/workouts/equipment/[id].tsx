@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Play, Clock, Flame, Users, Star, Bookmark, Share, Target, TrendingUp, Dumbbell, ChevronRight } from 'lucide-react-native';
+import { ArrowLeft, Play, Clock, Flame, Users, Star, Bookmark, Share, Target, TrendingUp, Dumbbell, ChevronRight, AlertCircle, RefreshCw } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEquipment } from '@/hooks/useEquipment';
 import { useWorkoutTemplates, WorkoutTemplate } from '@/hooks/useWorkoutTemplates';
@@ -30,12 +30,12 @@ export default function EquipmentDetailScreen() {
     selectedDifficulty === 'All' || workout.difficulty === selectedDifficulty
   );
 
-  // Add some mock templates if none exist in database
+  // Mock templates for demonstration when no real data exists
   const mockTemplates: WorkoutTemplate[] = [
     {
       id: 'mock-1',
       name: `${equipmentName} Full Body Strength`,
-      description: `Complete workout targeting all major muscle groups using ${equipmentName}`,
+      description: `Complete workout targeting all major muscle groups using ${equipmentName}. Perfect for building lean muscle mass and improving overall strength.`,
       difficulty: 'intermediate',
       estimated_duration: 45,
       target_muscles: ['Chest', 'Back', 'Legs', 'Arms'],
@@ -50,7 +50,7 @@ export default function EquipmentDetailScreen() {
     {
       id: 'mock-2',
       name: `${equipmentName} Upper Body Power`,
-      description: `Intense upper body workout focusing on strength and muscle definition`,
+      description: `Intense upper body workout focusing on strength and muscle definition using ${equipmentName}.`,
       difficulty: 'advanced',
       estimated_duration: 35,
       target_muscles: ['Chest', 'Shoulders', 'Arms', 'Back'],
@@ -65,7 +65,7 @@ export default function EquipmentDetailScreen() {
     {
       id: 'mock-3',
       name: `${equipmentName} Beginner Basics`,
-      description: `Perfect introduction to strength training with proper form focus`,
+      description: `Perfect introduction to strength training with proper form focus using ${equipmentName}.`,
       difficulty: 'beginner',
       estimated_duration: 25,
       target_muscles: ['Full Body'],
@@ -79,14 +79,16 @@ export default function EquipmentDetailScreen() {
     }
   ];
 
-  // Use database templates if available, otherwise use mock data
+  // Use real templates if available, otherwise show mock data
   const displayTemplates = templates.length > 0 ? templates : mockTemplates;
   const filteredDisplayTemplates = displayTemplates.filter(workout => 
     selectedDifficulty === 'All' || workout.difficulty === selectedDifficulty
   );
 
+  const hasRealData = templates.length > 0;
+
   if (equipmentLoading || templatesLoading) {
-    return <LoadingSpinner message="Loading equipment details..." />;
+    return <LoadingSpinner message="Loading equipment and workouts..." />;
   }
 
   if (equipmentError || !equipmentItem) {
@@ -132,6 +134,10 @@ export default function EquipmentDetailScreen() {
 
   const handleStartWorkout = (templateId: string) => {
     router.push(`/workouts/workout/${templateId}`);
+  };
+
+  const handleRetryTemplates = () => {
+    refetchTemplates();
   };
 
   const WorkoutCard = ({ workout }: { workout: WorkoutTemplate }) => {
@@ -282,9 +288,46 @@ export default function EquipmentDetailScreen() {
           </View>
         </View>
 
+        {/* Database Connection Status */}
+        {!hasRealData && (
+          <View style={styles.connectionStatus}>
+            <View style={styles.statusIcon}>
+              <AlertCircle size={20} color="#F59E0B" />
+            </View>
+            <View style={styles.statusContent}>
+              <Text style={styles.statusTitle}>Using Sample Data</Text>
+              <Text style={styles.statusText}>
+                Connect to your database to see real workout templates
+              </Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.retryButton}
+              onPress={handleRetryTemplates}
+            >
+              <RefreshCw size={16} color="#2563EB" />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Templates Error */}
+        {templatesError && (
+          <View style={styles.errorBanner}>
+            <AlertCircle size={20} color="#EF4444" />
+            <Text style={styles.errorText}>{templatesError}</Text>
+            <TouchableOpacity 
+              style={styles.retryButton}
+              onPress={handleRetryTemplates}
+            >
+              <RefreshCw size={16} color="#EF4444" />
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Difficulty Filter */}
         <View style={styles.filterSection}>
-          <Text style={styles.sectionTitle}>Available Workouts</Text>
+          <Text style={styles.sectionTitle}>
+            {hasRealData ? 'Available Workouts' : 'Sample Workouts'}
+          </Text>
           <ScrollView 
             horizontal 
             showsHorizontalScrollIndicator={false}
@@ -325,15 +368,6 @@ export default function EquipmentDetailScreen() {
             <Text style={styles.emptyStateTitle}>No workouts found</Text>
             <Text style={styles.emptyStateText}>
               Try selecting a different difficulty level
-            </Text>
-          </View>
-        )}
-
-        {/* Database Status */}
-        {templates.length === 0 && (
-          <View style={styles.databaseNote}>
-            <Text style={styles.databaseNoteText}>
-              💡 Showing sample workouts. Connect to your database to see real workout templates.
             </Text>
           </View>
         )}
@@ -473,6 +507,55 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Medium',
     color: '#64748B',
     textAlign: 'center',
+  },
+  connectionStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    marginHorizontal: 20,
+    marginBottom: 20,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  statusIcon: {
+    marginRight: 12,
+  },
+  statusContent: {
+    flex: 1,
+  },
+  statusTitle: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    color: '#92400E',
+    marginBottom: 2,
+  },
+  statusText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: '#92400E',
+  },
+  retryButton: {
+    padding: 8,
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEE2E2',
+    marginHorizontal: 20,
+    marginBottom: 20,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+    color: '#DC2626',
+    marginLeft: 12,
   },
   filterSection: {
     paddingHorizontal: 20,
@@ -644,20 +727,5 @@ const styles = StyleSheet.create({
     color: '#64748B',
     textAlign: 'center',
     lineHeight: 24,
-  },
-  databaseNote: {
-    margin: 20,
-    padding: 16,
-    backgroundColor: '#FEF3C7',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-  },
-  databaseNoteText: {
-    fontSize: 14,
-    fontFamily: 'Inter-Medium',
-    color: '#92400E',
-    textAlign: 'center',
-    lineHeight: 20,
   },
 });

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Play, Pause, RotateCcw, Clock, Flame, Target, Users, Star, CircleCheck as CheckCircle, Circle, Info, Dumbbell, Bookmark, Share } from 'lucide-react-native';
+import { ArrowLeft, Play, Pause, RotateCcw, Clock, Flame, Target, Users, Star, CircleCheck as CheckCircle, Circle, Info, Dumbbell, Bookmark, Share, AlertCircle, RefreshCw } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useWorkoutTemplates, WorkoutTemplateWithExercises } from '@/hooks/useWorkoutTemplates';
 import { useWorkoutSessions } from '@/hooks/useWorkoutSessions';
@@ -143,7 +143,14 @@ export default function WorkoutDetailScreen() {
     try {
       const template = await fetchTemplateWithExercises(id);
       setWorkoutTemplate(template);
+      
+      if (!template) {
+        console.log('No template found, will use mock data');
+      } else {
+        console.log('Loaded template with exercises:', template.exercises?.length || 0);
+      }
     } catch (err) {
+      console.error('Error loading workout template:', err);
       setError('Failed to load workout details');
     } finally {
       setLoading(false);
@@ -196,16 +203,21 @@ export default function WorkoutDetailScreen() {
     
     setIsStarted(true);
     
-    // Create workout session in database
-    const session = await createWorkoutSession({
-      name: workoutTemplate?.name || 'Sample Workout',
-      workout_id: workoutTemplate?.id,
-      duration: 0,
-      calories_burned: 0,
-    });
-    
-    if (session) {
-      setCurrentSessionId(session.id);
+    try {
+      // Create workout session in database
+      const session = await createWorkoutSession({
+        name: workoutTemplate?.name || 'Sample Workout',
+        workout_id: workoutTemplate?.id,
+        duration: 0,
+        calories_burned: 0,
+      });
+      
+      if (session) {
+        setCurrentSessionId(session.id);
+        console.log('Created workout session:', session.id);
+      }
+    } catch (err) {
+      console.error('Error creating workout session:', err);
     }
     
     Alert.alert('Workout Started!', 'Good luck with your training session!');
@@ -227,18 +239,25 @@ export default function WorkoutDetailScreen() {
     if (currentSessionId && workoutTemplate) {
       const calories = calculateCalories(workoutTime / 60, workoutTemplate.difficulty);
       
-      await updateWorkoutSession(currentSessionId, {
-        duration: Math.floor(workoutTime / 60),
-        calories_burned: calories,
-      });
-      
-      Alert.alert(
-        'Workout Complete!', 
-        `Great job! You burned ${calories} calories in ${formatTime(workoutTime)}.`,
-        [
-          { text: 'OK', onPress: () => router.back() }
-        ]
-      );
+      try {
+        await updateWorkoutSession(currentSessionId, {
+          duration: Math.floor(workoutTime / 60),
+          calories_burned: calories,
+        });
+        
+        Alert.alert(
+          'Workout Complete!', 
+          `Great job! You burned ${calories} calories in ${formatTime(workoutTime)}.`,
+          [
+            { text: 'OK', onPress: () => router.back() }
+          ]
+        );
+      } catch (err) {
+        console.error('Error completing workout:', err);
+        Alert.alert('Workout Complete!', 'Great job on completing your workout!');
+      }
+    } else {
+      Alert.alert('Workout Complete!', 'Great job on completing your workout!');
     }
   };
 
@@ -253,13 +272,17 @@ export default function WorkoutDetailScreen() {
       if (currentSessionId) {
         const exercise = workoutTemplate?.exercises[index] || mockExercises[index];
         if (exercise) {
-          await addExerciseSet({
-            workout_session_id: currentSessionId,
-            exercise_id: exercise.id,
-            set_number: 1,
-            reps: workoutTemplate?.exercises[index]?.reps || undefined,
-            rest_time: workoutTemplate?.exercises[index]?.rest_time || 60,
-          });
+          try {
+            await addExerciseSet({
+              workout_session_id: currentSessionId,
+              exercise_id: exercise.id || exercise.exercise?.id,
+              set_number: 1,
+              reps: workoutTemplate?.exercises[index]?.reps || undefined,
+              rest_time: workoutTemplate?.exercises[index]?.rest_time || 60,
+            });
+          } catch (err) {
+            console.error('Error adding exercise set:', err);
+          }
         }
       }
     }
@@ -311,6 +334,7 @@ export default function WorkoutDetailScreen() {
       tips: ex.exercise.tips?.split('\n') || ['Focus on proper form', 'Control the movement']
     })) : mockExercises;
 
+  const hasRealData = workoutTemplate?.exercises.length > 0;
   const calories = calculateCalories(displayData.estimated_duration, displayData.difficulty);
   const participants = generateParticipants(displayData.id);
   const rating = generateRating(displayData.id);
@@ -447,6 +471,27 @@ export default function WorkoutDetailScreen() {
           </View>
         </View>
 
+        {/* Database Connection Status */}
+        {!hasRealData && (
+          <View style={styles.connectionStatus}>
+            <View style={styles.statusIcon}>
+              <AlertCircle size={20} color="#F59E0B" />
+            </View>
+            <View style={styles.statusContent}>
+              <Text style={styles.statusTitle}>Using Sample Data</Text>
+              <Text style={styles.statusText}>
+                Connect to your database to see real workout exercises
+              </Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.retryButton}
+              onPress={loadWorkoutTemplate}
+            >
+              <RefreshCw size={16} color="#2563EB" />
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Workout Controls */}
         {isStarted && (
           <View style={styles.workoutControls}>
@@ -533,7 +578,9 @@ export default function WorkoutDetailScreen() {
         {/* Exercises List */}
         <View style={styles.exercisesSection}>
           <View style={styles.exercisesHeader}>
-            <Text style={styles.sectionTitle}>Exercises ({displayExercises.length})</Text>
+            <Text style={styles.sectionTitle}>
+              {hasRealData ? 'Exercises' : 'Sample Exercises'} ({displayExercises.length})
+            </Text>
             <Text style={styles.progressText}>
               {completedExercises.size}/{displayExercises.length} completed
             </Text>
@@ -554,15 +601,6 @@ export default function WorkoutDetailScreen() {
               <Play size={20} color="#FFFFFF" />
               <Text style={styles.startWorkoutText}>Start Workout</Text>
             </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Database Status */}
-        {!workoutTemplate && (
-          <View style={styles.databaseNote}>
-            <Text style={styles.databaseNoteText}>
-              💡 Showing sample workout. Connect to your database to see real workout templates with exercises.
-            </Text>
           </View>
         )}
       </ScrollView>
@@ -662,6 +700,36 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
     color: '#FFFFFF',
+  },
+  connectionStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    margin: 20,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  statusIcon: {
+    marginRight: 12,
+  },
+  statusContent: {
+    flex: 1,
+  },
+  statusTitle: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    color: '#92400E',
+    marginBottom: 2,
+  },
+  statusText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: '#92400E',
+  },
+  retryButton: {
+    padding: 8,
   },
   workoutControls: {
     backgroundColor: '#FFFFFF',
@@ -954,20 +1022,5 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: 'Inter-SemiBold',
     color: '#FFFFFF',
-  },
-  databaseNote: {
-    margin: 20,
-    padding: 16,
-    backgroundColor: '#FEF3C7',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-  },
-  databaseNoteText: {
-    fontSize: 14,
-    fontFamily: 'Inter-Medium',
-    color: '#92400E',
-    textAlign: 'center',
-    lineHeight: 20,
   },
 });

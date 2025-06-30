@@ -50,74 +50,6 @@ export interface WorkoutTemplateWithExercises extends WorkoutTemplate {
   exercises: WorkoutTemplateExercise[];
 }
 
-// Mock data
-const mockTemplates: WorkoutTemplate[] = [
-  {
-    id: '1',
-    name: 'Full Body Strength',
-    description: 'A comprehensive full-body workout targeting all major muscle groups.',
-    difficulty: 'intermediate',
-    estimated_duration: 60,
-    target_muscles: ['chest', 'back', 'legs', 'shoulders', 'arms', 'core'],
-    equipment_needed: ['Dumbbells', 'Bench', 'Yoga Mat'],
-    category: 'Strength',
-    is_public: true,
-    created_by: null,
-    image_url: null,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    name: 'HIIT Cardio',
-    description: 'High-intensity interval training for maximum calorie burn.',
-    difficulty: 'advanced',
-    estimated_duration: 30,
-    target_muscles: ['legs', 'core', 'cardio'],
-    equipment_needed: ['None'],
-    category: 'Cardio',
-    is_public: true,
-    created_by: null,
-    image_url: null,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-];
-
-const mockTemplateWithExercises: WorkoutTemplateWithExercises = {
-  ...mockTemplates[0],
-  exercises: [
-    {
-      id: '1',
-      template_id: '1',
-      exercise_id: '1',
-      order_index: 1,
-      sets: 3,
-      reps: 12,
-      duration: null,
-      rest_time: 60,
-      notes: 'Keep proper form throughout',
-      exercise: {
-        id: '1',
-        name: 'Dumbbell Bench Press',
-        muscle_group: 'chest',
-        difficulty: 'intermediate',
-        type: 'strength',
-        equipment: 'Dumbbells',
-        thumbnail_url: null,
-        video_url: null,
-        proper_form: 'Keep elbows at 45 degrees',
-        common_mistakes: 'Flaring elbows too wide',
-        tips: 'Maintain controlled movement',
-        instructions: ['Lie on bench', 'Press dumbbells up', 'Lower with control'],
-        primary_muscles: ['chest'],
-        secondary_muscles: ['shoulders', 'triceps'],
-        equipment_id: null,
-      },
-    },
-  ],
-};
-
 export function useWorkoutTemplates(equipmentName?: string) {
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -134,7 +66,7 @@ export function useWorkoutTemplates(equipmentName?: string) {
       
       const supabase = getSupabase();
       if (!supabase) {
-        throw new Error('Supabase client not initialized');
+        throw new Error('Supabase client not initialized. Please check your environment variables.');
       }
 
       let query = supabase
@@ -150,12 +82,17 @@ export function useWorkoutTemplates(equipmentName?: string) {
 
       const { data, error } = await query.returns<WorkoutTemplate[]>();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw new Error(`Database error: ${error.message}`);
+      }
       
+      console.log('Fetched workout templates:', data?.length || 0);
       setTemplates(data || []);
     } catch (err) {
       console.error('Error fetching workout templates:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch workout templates');
+      // Don't set empty array on error, keep existing data
     } finally {
       setLoading(false);
     }
@@ -197,7 +134,15 @@ export function useWorkoutTemplates(equipmentName?: string) {
         .single()
         .returns<WorkoutTemplateWithExercises>();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching template with exercises:', error);
+        throw error;
+      }
+      
+      // Sort exercises by order_index
+      if (data?.exercises) {
+        data.exercises.sort((a, b) => a.order_index - b.order_index);
+      }
       
       return data;
     } catch (err) {

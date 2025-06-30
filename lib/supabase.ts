@@ -31,6 +31,7 @@ export const getSupabase = () => {
           detectSessionInUrl: false
         }
       });
+      console.log('Supabase client initialized successfully');
     } catch (error) {
       console.error('Error initializing Supabase client:', error);
       return null;
@@ -296,6 +297,296 @@ export type Database = {
           completed_at?: string | null;
         };
       };
+      daily_goals: {
+        Row: {
+          id: string;
+          user_id: string;
+          date: string;
+          calorie_goal: number;
+          exercise_minutes_goal: number;
+          steps_goal: number;
+          water_goal: number;
+          calories_burned: number;
+          exercise_minutes: number;
+          steps: number;
+          water_consumed: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          date: string;
+          calorie_goal?: number;
+          exercise_minutes_goal?: number;
+          steps_goal?: number;
+          water_goal?: number;
+          calories_burned?: number;
+          exercise_minutes?: number;
+          steps?: number;
+          water_consumed?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          date?: string;
+          calorie_goal?: number;
+          exercise_minutes_goal?: number;
+          steps_goal?: number;
+          water_goal?: number;
+          calories_burned?: number;
+          exercise_minutes?: number;
+          steps?: number;
+          water_consumed?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      nutrition_logs: {
+        Row: {
+          id: string;
+          user_id: string;
+          log_date: string;
+          meal_type: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+          food_name: string;
+          calories: number;
+          protein: number;
+          carbs: number;
+          fat: number;
+          serving_size: string | null;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          log_date?: string;
+          meal_type: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+          food_name: string;
+          calories?: number;
+          protein?: number;
+          carbs?: number;
+          fat?: number;
+          serving_size?: string | null;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          log_date?: string;
+          meal_type?: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+          food_name?: string;
+          calories?: number;
+          protein?: number;
+          carbs?: number;
+          fat?: number;
+          serving_size?: string | null;
+          notes?: string | null;
+          created_at?: string;
+        };
+      };
+      body_measurements: {
+        Row: {
+          id: string;
+          user_id: string;
+          measurement_date: string;
+          weight: number | null;
+          body_fat_percentage: number | null;
+          muscle_mass: number | null;
+          chest: number | null;
+          waist: number | null;
+          hips: number | null;
+          bicep_left: number | null;
+          bicep_right: number | null;
+          thigh_left: number | null;
+          thigh_right: number | null;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          measurement_date?: string;
+          weight?: number | null;
+          body_fat_percentage?: number | null;
+          muscle_mass?: number | null;
+          chest?: number | null;
+          waist?: number | null;
+          hips?: number | null;
+          bicep_left?: number | null;
+          bicep_right?: number | null;
+          thigh_left?: number | null;
+          thigh_right?: number | null;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          measurement_date?: string;
+          weight?: number | null;
+          body_fat_percentage?: number | null;
+          muscle_mass?: number | null;
+          chest?: number | null;
+          waist?: number | null;
+          hips?: number | null;
+          bicep_left?: number | null;
+          bicep_right?: number | null;
+          thigh_left?: number | null;
+          thigh_right?: number | null;
+          notes?: string | null;
+          created_at?: string;
+        };
+      };
+      progress_photos: {
+        Row: {
+          id: string;
+          user_id: string;
+          photo_url: string;
+          photo_type: 'front' | 'side' | 'back' | 'other';
+          taken_date: string;
+          weight: number | null;
+          notes: string | null;
+          is_private: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          photo_url: string;
+          photo_type: 'front' | 'side' | 'back' | 'other';
+          taken_date?: string;
+          weight?: number | null;
+          notes?: string | null;
+          is_private?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          photo_url?: string;
+          photo_type?: 'front' | 'side' | 'back' | 'other';
+          taken_date?: string;
+          weight?: number | null;
+          notes?: string | null;
+          is_private?: boolean;
+          created_at?: string;
+        };
+      };
+      user_achievements: {
+        Row: {
+          id: string;
+          user_id: string;
+          achievement_type: string;
+          achievement_name: string;
+          achievement_description: string | null;
+          target_value: number | null;
+          current_value: number;
+          is_completed: boolean;
+          completed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          achievement_type: string;
+          achievement_name: string;
+          achievement_description?: string | null;
+          target_value?: number | null;
+          current_value?: number;
+          is_completed?: boolean;
+          completed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          achievement_type?: string;
+          achievement_name?: string;
+          achievement_description?: string | null;
+          target_value?: number | null;
+          current_value?: number;
+          is_completed?: boolean;
+          completed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      user_favorites: {
+        Row: {
+          id: string;
+          user_id: string;
+          item_type: 'exercise' | 'workout' | 'template';
+          item_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          item_type: 'exercise' | 'workout' | 'template';
+          item_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          item_type?: 'exercise' | 'workout' | 'template';
+          item_id?: string;
+          created_at?: string;
+        };
+      };
+      profiles: {
+        Row: {
+          id: string;
+          user_id: string | null;
+          bio: string | null;
+          created_at: string;
+          name: string | null;
+          avatar_url: string | null;
+          level: string;
+          workouts_completed: number;
+          total_calories: number;
+          current_streak: number;
+          longest_streak: number;
+          email: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          user_id?: string | null;
+          bio?: string | null;
+          created_at?: string;
+          name?: string | null;
+          avatar_url?: string | null;
+          level?: string;
+          workouts_completed?: number;
+          total_calories?: number;
+          current_streak?: number;
+          longest_streak?: number;
+          email?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string | null;
+          bio?: string | null;
+          created_at?: string;
+          name?: string | null;
+          avatar_url?: string | null;
+          level?: string;
+          workouts_completed?: number;
+          total_calories?: number;
+          current_streak?: number;
+          longest_streak?: number;
+          email?: string | null;
+          updated_at?: string;
+        };
+      };
     };
   };
 };
@@ -306,3 +597,10 @@ export type WorkoutTemplate = Database['public']['Tables']['workout_templates'][
 export type WorkoutTemplateExercise = Database['public']['Tables']['workout_template_exercises']['Row'];
 export type WorkoutSession = Database['public']['Tables']['workout_sessions']['Row'];
 export type ExerciseSet = Database['public']['Tables']['exercise_sets']['Row'];
+export type DailyGoal = Database['public']['Tables']['daily_goals']['Row'];
+export type NutritionLog = Database['public']['Tables']['nutrition_logs']['Row'];
+export type BodyMeasurement = Database['public']['Tables']['body_measurements']['Row'];
+export type ProgressPhoto = Database['public']['Tables']['progress_photos']['Row'];
+export type UserAchievement = Database['public']['Tables']['user_achievements']['Row'];
+export type UserFavorite = Database['public']['Tables']['user_favorites']['Row'];
+export type Profile = Database['public']['Tables']['profiles']['Row'];
