@@ -1,9 +1,45 @@
 import { createClient } from '@supabase/supabase-js';
+import Constants from 'expo-constants';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
+// Get environment variables from Expo Constants
+const getEnvVar = (key: string): string => {
+  const value = Constants.expoConfig?.extra?.[key] || process.env[`EXPO_PUBLIC_${key}`];
+  if (!value) {
+    console.warn(`Environment variable ${key} is not set`);
+  }
+  return value || '';
+};
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Get Supabase configuration
+const supabaseUrl = getEnvVar('SUPABASE_URL');
+const supabaseAnonKey = getEnvVar('SUPABASE_ANON_KEY');
+
+// Create a singleton instance
+let supabaseInstance: ReturnType<typeof createClient> | null = null;
+
+export const getSupabase = () => {
+  if (!supabaseInstance) {
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('Supabase configuration is missing. Please set SUPABASE_URL and SUPABASE_ANON_KEY in your environment variables or app.config.js');
+      return null;
+    }
+    try {
+      supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: false
+        }
+      });
+    } catch (error) {
+      console.error('Error initializing Supabase client:', error);
+      return null;
+    }
+  }
+  return supabaseInstance;
+};
+
+export const supabase = getSupabase();
 
 export type Database = {
   public: {

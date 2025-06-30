@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Play, Pause, RotateCcw, Clock, Flame, Target, Users, Star, CircleCheck as CheckCircle, Circle, Info, Dumbbell } from 'lucide-react-native';
+import { ArrowLeft, Play, Pause, RotateCcw, Clock, Flame, Target, Users, Star, CircleCheck as CheckCircle, Circle, Info, Dumbbell, Bookmark, Share } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useWorkoutTemplates, WorkoutTemplateWithExercises } from '@/hooks/useWorkoutTemplates';
 import { useWorkoutSessions } from '@/hooks/useWorkoutSessions';
@@ -406,16 +406,21 @@ export default function WorkoutDetailScreen() {
         <Text style={styles.headerTitle} numberOfLines={1}>
           Workout Details
         </Text>
-        <TouchableOpacity 
-          style={[styles.bookmarkButton, isBookmarked && styles.bookmarkedButton]}
-          onPress={() => setIsBookmarked(!isBookmarked)}
-        >
-          <Star 
-            size={20} 
-            color={isBookmarked ? "#FFFFFF" : "#64748B"} 
-            fill={isBookmarked ? "#FFFFFF" : "none"}
-          />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => setIsBookmarked(!isBookmarked)}
+          >
+            <Bookmark 
+              size={20} 
+              color={isBookmarked ? '#2563EB' : '#64748B'}
+              fill={isBookmarked ? '#2563EB' : 'transparent'}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton}>
+            <Share size={20} color="#64748B" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -596,16 +601,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginHorizontal: 16,
   },
-  bookmarkButton: {
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
     backgroundColor: '#F8FAFC',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  bookmarkedButton: {
-    backgroundColor: '#F59E0B',
   },
   heroSection: {
     position: 'relative',

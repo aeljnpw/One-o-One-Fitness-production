@@ -1,12 +1,34 @@
 import { useState, useEffect } from 'react';
-import { supabase, Exercise, Equipment } from '@/lib/supabase';
+import { getSupabase } from '@/lib/supabase';
 
-export type ExerciseWithEquipment = Exercise & {
-  equipment_data?: Equipment;
-};
+export interface Exercise {
+  id: string;
+  name: string;
+  muscle_group: string;
+  difficulty: string;
+  type: string | null;
+  equipment: string | null;
+  thumbnail_url: string | null;
+  video_url: string | null;
+  proper_form: string | null;
+  common_mistakes: string | null;
+  tips: string | null;
+  instructions: string[] | null;
+  primary_muscles: string[] | null;
+  secondary_muscles: string[] | null;
+  equipment_id: string | null;
+  created_at: string;
+  equipment_data?: {
+    id: string;
+    name: string;
+    description: string;
+    image_url: string | null;
+    category: string;
+  };
+}
 
 export function useExercises() {
-  const [exercises, setExercises] = useState<ExerciseWithEquipment[]>([]);
+  const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,21 +41,66 @@ export function useExercises() {
       setLoading(true);
       setError(null);
       
+      const supabase = getSupabase();
+      if (!supabase) {
+        throw new Error('Supabase client not initialized');
+      }
+
       const { data, error } = await supabase
         .from('exercises')
         .select(`
           *,
-          equipment_data:equipment_id(*)
+          equipment_data:equipment_id (
+            id,
+            name,
+            description,
+            image_url,
+            category
+          )
         `)
-        .order('name');
+        .order('name')
+        .returns<Exercise[]>();
 
       if (error) throw error;
       
       setExercises(data || []);
     } catch (err) {
+      console.error('Error fetching exercises:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch exercises');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getExerciseById = async (id: string): Promise<Exercise | null> => {
+    try {
+      const supabase = getSupabase();
+      if (!supabase) {
+        throw new Error('Supabase client not initialized');
+      }
+
+      const { data, error } = await supabase
+        .from('exercises')
+        .select(`
+          *,
+          equipment_data:equipment_id (
+            id,
+            name,
+            description,
+            image_url,
+            category
+          )
+        `)
+        .eq('id', id)
+        .single()
+        .returns<Exercise>();
+
+      if (error) throw error;
+      
+      return data;
+    } catch (err) {
+      console.error('Error fetching exercise by ID:', err);
+      return null;
     }
   };
 
@@ -66,6 +133,7 @@ export function useExercises() {
     loading, 
     error, 
     refetch: fetchExercises,
+    getExerciseById,
     filterExercises 
   };
 }

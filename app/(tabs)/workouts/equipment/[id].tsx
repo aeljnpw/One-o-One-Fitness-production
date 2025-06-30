@@ -1,21 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Play, Clock, Flame, Users, Star, Bookmark, Share, Target, TrendingUp, Dumbbell } from 'lucide-react-native';
+import { ArrowLeft, Play, Clock, Flame, Users, Star, Bookmark, Share, Target, TrendingUp, Dumbbell, ChevronRight } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEquipment } from '@/hooks/useEquipment';
 import { useWorkoutTemplates, WorkoutTemplate } from '@/hooks/useWorkoutTemplates';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ErrorMessage } from '@/components/ErrorMessage';
 
-export default function EquipmentWorkoutsScreen() {
+export default function EquipmentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { equipment, loading: equipmentLoading, error: equipmentError } = useEquipment();
+  const { equipment, loading: equipmentLoading, error: equipmentError, refetch: refetchEquipment } = useEquipment();
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('All');
   const [isBookmarked, setIsBookmarked] = useState(false);
 
-  const currentEquipment = equipment.find(item => item.id === id);
-  const equipmentName = currentEquipment?.name;
+  const equipmentItem = equipment.find(item => item.id === id);
+  const equipmentName = equipmentItem?.name;
 
   const { 
     templates, 
@@ -89,8 +89,8 @@ export default function EquipmentWorkoutsScreen() {
     return <LoadingSpinner message="Loading equipment details..." />;
   }
 
-  if (equipmentError || !currentEquipment) {
-    return <ErrorMessage message="Equipment not found" onRetry={() => router.back()} />;
+  if (equipmentError || !equipmentItem) {
+    return <ErrorMessage message="Equipment not found" onRetry={refetchEquipment} />;
   }
 
   const getDifficultyColor = (difficulty: string) => {
@@ -215,7 +215,7 @@ export default function EquipmentWorkoutsScreen() {
           <ArrowLeft size={24} color="#1E293B" />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>
-          {currentEquipment.name}
+          {equipmentItem.name}
         </Text>
         <View style={styles.headerActions}>
           <TouchableOpacity 
@@ -237,9 +237,9 @@ export default function EquipmentWorkoutsScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Equipment Info */}
         <View style={styles.equipmentInfo}>
-          {currentEquipment.image_url ? (
+          {equipmentItem.image_url ? (
             <Image 
-              source={{ uri: currentEquipment.image_url }}
+              source={{ uri: equipmentItem.image_url }}
               style={styles.equipmentImage}
               resizeMode="cover"
             />
@@ -249,12 +249,12 @@ export default function EquipmentWorkoutsScreen() {
             </View>
           )}
           <View style={styles.equipmentDetails}>
-            <Text style={styles.equipmentName}>{currentEquipment.name}</Text>
+            <Text style={styles.equipmentName}>{equipmentItem.name}</Text>
             <View style={styles.categoryBadge}>
-              <Text style={styles.categoryText}>{currentEquipment.category}</Text>
+              <Text style={styles.categoryText}>{equipmentItem.category}</Text>
             </View>
             <Text style={styles.equipmentDescription}>
-              {currentEquipment.description}
+              {equipmentItem.description}
             </Text>
           </View>
         </View>

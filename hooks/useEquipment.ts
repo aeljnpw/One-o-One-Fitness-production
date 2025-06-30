@@ -1,5 +1,25 @@
 import { useState, useEffect } from 'react';
-import { supabase, Equipment } from '@/lib/supabase';
+import { getSupabase } from '@/lib/supabase';
+
+export interface Equipment {
+  id: string;
+  name: string;
+  description: string;
+  image_url: string | null;
+  category: string;
+  created_at: string;
+  updated_at: string;
+  exercises?: {
+    id: string;
+    name: string;
+  }[];
+  maintenance?: {
+    id: string;
+    maintenance_type: 'cleaning' | 'repair' | 'inspection' | 'replacement';
+    maintenance_date: string;
+    next_maintenance_date: string | null;
+  }[];
+}
 
 export function useEquipment() {
   const [equipment, setEquipment] = useState<Equipment[]>([]);
@@ -15,20 +35,95 @@ export function useEquipment() {
       setLoading(true);
       setError(null);
       
+      const supabase = getSupabase();
+      if (!supabase) {
+        throw new Error('Supabase client not initialized');
+      }
+
       const { data, error } = await supabase
         .from('equipment')
-        .select('*')
-        .order('name');
+        .select(`
+          *,
+          exercises (
+            id,
+            name
+          ),
+          equipment_maintenance (
+            id,
+            maintenance_type,
+            maintenance_date,
+            next_maintenance_date
+          )
+        `)
+        .order('name')
+        .returns<Equipment[]>();
 
       if (error) throw error;
       
       setEquipment(data || []);
     } catch (err) {
+      console.error('Error fetching equipment:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch equipment');
     } finally {
       setLoading(false);
     }
   };
 
-  return { equipment, loading, error, refetch: fetchEquipment };
+  const getEquipmentById = async (id: string): Promise<Equipment | null> => {
+    try {
+      const supabase = getSupabase();
+      if (!supabase) {
+        throw new Error('Supabase client not initialized');
+      }
+
+      const { data, error } = await supabase
+        .from('equipment')
+        .select(`
+          *,
+          exercises (
+            id,
+            name,
+            muscle_group,
+            difficulty,
+            type,
+            thumbnail_url,
+            video_url,
+            proper_form,
+            common_mistakes,
+            tips,
+            instructions,
+            primary_muscles,
+            secondary_muscles
+          ),
+          equipment_maintenance (
+            id,
+            maintenance_type,
+            maintenance_date,
+            description,
+            cost,
+            performed_by,
+            next_maintenance_date,
+            notes
+          )
+        `)
+        .eq('id', id)
+        .single()
+        .returns<Equipment>();
+
+      if (error) throw error;
+      
+      return data;
+    } catch (err) {
+      console.error('Error fetching equipment by ID:', err);
+      return null;
+    }
+  };
+
+  return { 
+    equipment, 
+    loading, 
+    error, 
+    refetch: fetchEquipment,
+    getEquipmentById
+  };
 }
