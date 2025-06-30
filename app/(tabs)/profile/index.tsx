@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Settings, User, Bell, Shield, CircleHelp as HelpCircle, LogOut, ChevronRight, CreditCard as Edit3, Trophy, Clock, Target } from 'lucide-react-native';
-import { router } from 'expo-router';
 
 export default function ProfileScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -117,7 +116,7 @@ export default function ProfileScreen() {
             icon={<User size={20} color="#64748B" />}
             title="Personal Information"
             subtitle="Update your personal details"
-            onPress={() => router.push('/profile/personal-info')}
+            onPress={() => {}}
           />
           <MenuItem
             icon={<Bell size={20} color="#64748B" />}
@@ -146,7 +145,7 @@ export default function ProfileScreen() {
             icon={<Target size={20} color="#64748B" />}
             title="Fitness Goals"
             subtitle="Update your fitness objectives"
-            onPress={() => router.push('/profile/fitness-goals')}
+            onPress={() => {}}
           />
           <MenuItem
             icon={<Bell size={20} color="#64748B" />}
