@@ -1,195 +1,208 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Play, Clock, Flame, Users, Star, Bookmark, Share, Target, TrendingUp } from 'lucide-react-native';
+import { ArrowLeft, Play, Clock, Flame, Users, Star, Bookmark, Share, Target, TrendingUp, Dumbbell } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEquipment } from '@/hooks/useEquipment';
+import { useWorkoutTemplates, WorkoutTemplate } from '@/hooks/useWorkoutTemplates';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ErrorMessage } from '@/components/ErrorMessage';
 
-interface WorkoutTemplate {
-  id: string;
-  name: string;
-  description: string;
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  duration: number;
-  exercises: number;
-  calories: number;
-  rating: number;
-  participants: number;
-  image_url: string;
-  tags: string[];
-  targetMuscles: string[];
-}
-
-interface Exercise {
-  id: string;
-  name: string;
-  sets: number;
-  reps: string;
-  duration?: number;
-  restTime: number;
-  instructions: string[];
-}
-
 export default function EquipmentWorkoutsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { equipment, loading, error } = useEquipment();
+  const { equipment, loading: equipmentLoading, error: equipmentError } = useEquipment();
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('All');
   const [isBookmarked, setIsBookmarked] = useState(false);
 
   const currentEquipment = equipment.find(item => item.id === id);
+  const equipmentName = currentEquipment?.name;
 
-  // Mock workout templates for the equipment
-  const workoutTemplates: WorkoutTemplate[] = [
-    {
-      id: '1',
-      name: 'Full Body Strength',
-      description: 'Complete workout targeting all major muscle groups with progressive overload',
-      difficulty: 'Intermediate',
-      duration: 45,
-      exercises: 8,
-      calories: 320,
-      rating: 4.8,
-      participants: 1247,
-      image_url: 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=2',
-      tags: ['Strength', 'Full Body', 'Muscle Building'],
-      targetMuscles: ['Chest', 'Back', 'Legs', 'Arms']
-    },
-    {
-      id: '2',
-      name: 'Upper Body Power',
-      description: 'Intense upper body workout focusing on strength and muscle definition',
-      difficulty: 'Advanced',
-      duration: 35,
-      exercises: 6,
-      calories: 280,
-      rating: 4.9,
-      participants: 892,
-      image_url: 'https://images.pexels.com/photos/1431282/pexels-photo-1431282.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=2',
-      tags: ['Upper Body', 'Strength', 'Power'],
-      targetMuscles: ['Chest', 'Shoulders', 'Arms', 'Back']
-    },
-    {
-      id: '3',
-      name: 'Beginner Basics',
-      description: 'Perfect introduction to strength training with proper form focus',
-      difficulty: 'Beginner',
-      duration: 25,
-      exercises: 5,
-      calories: 180,
-      rating: 4.6,
-      participants: 2156,
-      image_url: 'https://images.pexels.com/photos/1552106/pexels-photo-1552106.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=2',
-      tags: ['Beginner', 'Form', 'Foundation'],
-      targetMuscles: ['Full Body']
-    },
-    {
-      id: '4',
-      name: 'Endurance Builder',
-      description: 'High-rep, moderate weight workout to build muscular endurance',
-      difficulty: 'Intermediate',
-      duration: 40,
-      exercises: 10,
-      calories: 350,
-      rating: 4.7,
-      participants: 743,
-      image_url: 'https://images.pexels.com/photos/1552252/pexels-photo-1552252.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=2',
-      tags: ['Endurance', 'High Rep', 'Conditioning'],
-      targetMuscles: ['Full Body', 'Core']
-    }
-  ];
+  const { 
+    templates, 
+    loading: templatesLoading, 
+    error: templatesError,
+    refetch: refetchTemplates 
+  } = useWorkoutTemplates(equipmentName);
 
-  const difficulties = ['All', 'Beginner', 'Intermediate', 'Advanced'];
+  const difficulties = ['All', 'beginner', 'intermediate', 'advanced'];
 
-  const filteredWorkouts = workoutTemplates.filter(workout => 
+  const filteredWorkouts = templates.filter(workout => 
     selectedDifficulty === 'All' || workout.difficulty === selectedDifficulty
   );
 
-  if (loading) {
+  // Add some mock templates if none exist in database
+  const mockTemplates: WorkoutTemplate[] = [
+    {
+      id: 'mock-1',
+      name: `${equipmentName} Full Body Strength`,
+      description: `Complete workout targeting all major muscle groups using ${equipmentName}`,
+      difficulty: 'intermediate',
+      estimated_duration: 45,
+      target_muscles: ['Chest', 'Back', 'Legs', 'Arms'],
+      equipment_needed: [equipmentName || 'Equipment'],
+      category: 'strength',
+      is_public: true,
+      created_by: null,
+      image_url: 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=2',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: 'mock-2',
+      name: `${equipmentName} Upper Body Power`,
+      description: `Intense upper body workout focusing on strength and muscle definition`,
+      difficulty: 'advanced',
+      estimated_duration: 35,
+      target_muscles: ['Chest', 'Shoulders', 'Arms', 'Back'],
+      equipment_needed: [equipmentName || 'Equipment'],
+      category: 'strength',
+      is_public: true,
+      created_by: null,
+      image_url: 'https://images.pexels.com/photos/1431282/pexels-photo-1431282.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=2',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: 'mock-3',
+      name: `${equipmentName} Beginner Basics`,
+      description: `Perfect introduction to strength training with proper form focus`,
+      difficulty: 'beginner',
+      estimated_duration: 25,
+      target_muscles: ['Full Body'],
+      equipment_needed: [equipmentName || 'Equipment'],
+      category: 'general',
+      is_public: true,
+      created_by: null,
+      image_url: 'https://images.pexels.com/photos/1552106/pexels-photo-1552106.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=2',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+  ];
+
+  // Use database templates if available, otherwise use mock data
+  const displayTemplates = templates.length > 0 ? templates : mockTemplates;
+  const filteredDisplayTemplates = displayTemplates.filter(workout => 
+    selectedDifficulty === 'All' || workout.difficulty === selectedDifficulty
+  );
+
+  if (equipmentLoading || templatesLoading) {
     return <LoadingSpinner message="Loading equipment details..." />;
   }
 
-  if (error || !currentEquipment) {
+  if (equipmentError || !currentEquipment) {
     return <ErrorMessage message="Equipment not found" onRetry={() => router.back()} />;
   }
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
-      case 'Beginner': return '#059669';
-      case 'Intermediate': return '#F59E0B';
-      case 'Advanced': return '#EF4444';
+      case 'beginner': return '#059669';
+      case 'intermediate': return '#F59E0B';
+      case 'advanced': return '#EF4444';
       default: return '#64748B';
     }
   };
 
-  const handleStartWorkout = (workoutId: string) => {
-    router.push(`/workouts/workout/${workoutId}`);
+  const getDifficultyLabel = (difficulty: string) => {
+    return difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
   };
 
-  const WorkoutCard = ({ workout }: { workout: WorkoutTemplate }) => (
-    <TouchableOpacity 
-      style={styles.workoutCard}
-      onPress={() => handleStartWorkout(workout.id)}
-      activeOpacity={0.7}
-    >
-      <Image 
-        source={{ uri: workout.image_url }}
-        style={styles.workoutImage}
-        resizeMode="cover"
-      />
-      <View style={styles.workoutContent}>
-        <View style={styles.workoutHeader}>
-          <View style={styles.workoutTitleRow}>
-            <Text style={styles.workoutTitle}>{workout.name}</Text>
-            <View style={[styles.difficultyBadge, { backgroundColor: getDifficultyColor(workout.difficulty) }]}>
-              <Text style={styles.difficultyText}>{workout.difficulty}</Text>
+  const calculateCalories = (duration: number, difficulty: string) => {
+    const baseCalories = duration * 6; // 6 calories per minute base
+    const multiplier = difficulty === 'advanced' ? 1.3 : difficulty === 'intermediate' ? 1.1 : 0.9;
+    return Math.round(baseCalories * multiplier);
+  };
+
+  const generateParticipants = (templateId: string) => {
+    // Generate consistent participant count based on template ID
+    const hash = templateId.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    return Math.abs(hash % 2000) + 500;
+  };
+
+  const generateRating = (templateId: string) => {
+    // Generate consistent rating based on template ID
+    const hash = templateId.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    return 4.2 + (Math.abs(hash % 80) / 100); // Rating between 4.2 and 5.0
+  };
+
+  const handleStartWorkout = (templateId: string) => {
+    router.push(`/workouts/workout/${templateId}`);
+  };
+
+  const WorkoutCard = ({ workout }: { workout: WorkoutTemplate }) => {
+    const calories = calculateCalories(workout.estimated_duration, workout.difficulty);
+    const participants = generateParticipants(workout.id);
+    const rating = generateRating(workout.id);
+
+    return (
+      <TouchableOpacity 
+        style={styles.workoutCard}
+        onPress={() => handleStartWorkout(workout.id)}
+        activeOpacity={0.7}
+      >
+        <Image 
+          source={{ uri: workout.image_url || 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=2' }}
+          style={styles.workoutImage}
+          resizeMode="cover"
+        />
+        <View style={styles.workoutContent}>
+          <View style={styles.workoutHeader}>
+            <View style={styles.workoutTitleRow}>
+              <Text style={styles.workoutTitle}>{workout.name}</Text>
+              <View style={[styles.difficultyBadge, { backgroundColor: getDifficultyColor(workout.difficulty) }]}>
+                <Text style={styles.difficultyText}>{getDifficultyLabel(workout.difficulty)}</Text>
+              </View>
+            </View>
+            <View style={styles.ratingRow}>
+              <Star size={14} color="#F59E0B" fill="#F59E0B" />
+              <Text style={styles.ratingText}>{rating.toFixed(1)}</Text>
+              <Text style={styles.participantsText}>({participants})</Text>
             </View>
           </View>
-          <View style={styles.ratingRow}>
-            <Star size={14} color="#F59E0B" fill="#F59E0B" />
-            <Text style={styles.ratingText}>{workout.rating}</Text>
-            <Text style={styles.participantsText}>({workout.participants})</Text>
-          </View>
-        </View>
-        
-        <Text style={styles.workoutDescription} numberOfLines={2}>
-          {workout.description}
-        </Text>
-        
-        <View style={styles.workoutStats}>
-          <View style={styles.statItem}>
-            <Clock size={14} color="#64748B" />
-            <Text style={styles.statText}>{workout.duration} min</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Target size={14} color="#64748B" />
-            <Text style={styles.statText}>{workout.exercises} exercises</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Flame size={14} color="#64748B" />
-            <Text style={styles.statText}>{workout.calories} cal</Text>
-          </View>
-        </View>
-        
-        <View style={styles.tagsContainer}>
-          {workout.tags.slice(0, 3).map((tag, index) => (
-            <View key={index} style={styles.tag}>
-              <Text style={styles.tagText}>{tag}</Text>
+          
+          <Text style={styles.workoutDescription} numberOfLines={2}>
+            {workout.description || `A comprehensive workout using ${equipmentName}`}
+          </Text>
+          
+          <View style={styles.workoutStats}>
+            <View style={styles.statItem}>
+              <Clock size={14} color="#64748B" />
+              <Text style={styles.statText}>{workout.estimated_duration} min</Text>
             </View>
-          ))}
+            <View style={styles.statItem}>
+              <Target size={14} color="#64748B" />
+              <Text style={styles.statText}>{workout.target_muscles.length} muscles</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Flame size={14} color="#64748B" />
+              <Text style={styles.statText}>{calories} cal</Text>
+            </View>
+          </View>
+          
+          <View style={styles.tagsContainer}>
+            {workout.target_muscles.slice(0, 3).map((muscle, index) => (
+              <View key={index} style={styles.tag}>
+                <Text style={styles.tagText}>{muscle}</Text>
+              </View>
+            ))}
+          </View>
+          
+          <TouchableOpacity 
+            style={styles.startButton}
+            onPress={() => handleStartWorkout(workout.id)}
+          >
+            <Play size={16} color="#FFFFFF" />
+            <Text style={styles.startButtonText}>Start Workout</Text>
+          </TouchableOpacity>
         </View>
-        
-        <TouchableOpacity 
-          style={styles.startButton}
-          onPress={() => handleStartWorkout(workout.id)}
-        >
-          <Play size={16} color="#FFFFFF" />
-          <Text style={styles.startButtonText}>Start Workout</Text>
-        </TouchableOpacity>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -232,7 +245,7 @@ export default function EquipmentWorkoutsScreen() {
             />
           ) : (
             <View style={styles.placeholderImage}>
-              <Target size={48} color="#64748B" />
+              <Dumbbell size={48} color="#64748B" />
             </View>
           )}
           <View style={styles.equipmentDetails}>
@@ -250,20 +263,20 @@ export default function EquipmentWorkoutsScreen() {
         <View style={styles.statsSection}>
           <View style={styles.statCard}>
             <TrendingUp size={24} color="#2563EB" />
-            <Text style={styles.statValue}>{workoutTemplates.length}</Text>
+            <Text style={styles.statValue}>{displayTemplates.length}</Text>
             <Text style={styles.statLabel}>Workouts</Text>
           </View>
           <View style={styles.statCard}>
             <Users size={24} color="#059669" />
             <Text style={styles.statValue}>
-              {workoutTemplates.reduce((sum, w) => sum + w.participants, 0)}
+              {displayTemplates.reduce((sum, w) => sum + generateParticipants(w.id), 0)}
             </Text>
             <Text style={styles.statLabel}>Users</Text>
           </View>
           <View style={styles.statCard}>
             <Star size={24} color="#F59E0B" />
             <Text style={styles.statValue}>
-              {(workoutTemplates.reduce((sum, w) => sum + w.rating, 0) / workoutTemplates.length).toFixed(1)}
+              {(displayTemplates.reduce((sum, w) => sum + generateRating(w.id), 0) / displayTemplates.length).toFixed(1)}
             </Text>
             <Text style={styles.statLabel}>Rating</Text>
           </View>
@@ -291,7 +304,7 @@ export default function EquipmentWorkoutsScreen() {
                   styles.difficultyButtonText,
                   selectedDifficulty === difficulty && styles.activeDifficultyButtonText
                 ]}>
-                  {difficulty}
+                  {difficulty === 'All' ? 'All' : getDifficultyLabel(difficulty)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -300,18 +313,27 @@ export default function EquipmentWorkoutsScreen() {
 
         {/* Workouts List */}
         <View style={styles.workoutsSection}>
-          {filteredWorkouts.map((workout) => (
+          {filteredDisplayTemplates.map((workout) => (
             <WorkoutCard key={workout.id} workout={workout} />
           ))}
         </View>
 
         {/* Empty State */}
-        {filteredWorkouts.length === 0 && (
+        {filteredDisplayTemplates.length === 0 && (
           <View style={styles.emptyState}>
             <Target size={48} color="#94A3B8" />
             <Text style={styles.emptyStateTitle}>No workouts found</Text>
             <Text style={styles.emptyStateText}>
               Try selecting a different difficulty level
+            </Text>
+          </View>
+        )}
+
+        {/* Database Status */}
+        {templates.length === 0 && (
+          <View style={styles.databaseNote}>
+            <Text style={styles.databaseNoteText}>
+              💡 Showing sample workouts. Connect to your database to see real workout templates.
             </Text>
           </View>
         )}
@@ -622,5 +644,20 @@ const styles = StyleSheet.create({
     color: '#64748B',
     textAlign: 'center',
     lineHeight: 24,
+  },
+  databaseNote: {
+    margin: 20,
+    padding: 16,
+    backgroundColor: '#FEF3C7',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  databaseNoteText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+    color: '#92400E',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Play, Pause, RotateCcw, Clock, Flame, Target, Users, Star, CircleCheck as CheckCircle, Circle, Info } from 'lucide-react-native';
+import { ArrowLeft, Play, Pause, RotateCcw, Clock, Flame, Target, Users, Star, CircleCheck as CheckCircle, Circle, Info, Dumbbell } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useWorkoutTemplates, WorkoutTemplateWithExercises } from '@/hooks/useWorkoutTemplates';
+import { useWorkoutSessions } from '@/hooks/useWorkoutSessions';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { ErrorMessage } from '@/components/ErrorMessage';
 
-interface Exercise {
+interface MockExercise {
   id: string;
   name: string;
   sets: number;
@@ -17,137 +21,108 @@ interface Exercise {
   tips: string[];
 }
 
-interface WorkoutDetail {
-  id: string;
-  name: string;
-  description: string;
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  duration: number;
-  exercises: Exercise[];
-  calories: number;
-  rating: number;
-  participants: number;
-  image_url: string;
-  tags: string[];
-  targetMuscles: string[];
-  equipment: string[];
-  instructor: {
-    name: string;
-    image_url: string;
-    specialization: string;
-  };
-}
-
 export default function WorkoutDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { fetchTemplateWithExercises } = useWorkoutTemplates();
+  const { createWorkoutSession, updateWorkoutSession, addExerciseSet } = useWorkoutSessions();
+  
+  const [workoutTemplate, setWorkoutTemplate] = useState<WorkoutTemplateWithExercises | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isStarted, setIsStarted] = useState(false);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [completedExercises, setCompletedExercises] = useState<Set<number>>(new Set());
   const [workoutTime, setWorkoutTime] = useState(0);
   const [isBookmarked, setIsBookmarked] = useState(false);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
 
-  // Mock workout data - in real app, this would come from your database
-  const workoutDetail: WorkoutDetail = {
-    id: id || '1',
-    name: 'Full Body Strength Training',
-    description: 'A comprehensive strength training workout targeting all major muscle groups. Perfect for building lean muscle mass and improving overall strength.',
-    difficulty: 'Intermediate',
-    duration: 45,
-    calories: 320,
-    rating: 4.8,
-    participants: 1247,
-    image_url: 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=800&h=400&dpr=2',
-    tags: ['Strength', 'Full Body', 'Muscle Building', 'Progressive'],
-    targetMuscles: ['Chest', 'Back', 'Legs', 'Arms', 'Core'],
-    equipment: ['Dumbbells', 'Barbell', 'Bench'],
-    instructor: {
-      name: 'Sarah Johnson',
-      image_url: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
-      specialization: 'Strength & Conditioning'
+  // Mock exercises for when database doesn't have data
+  const mockExercises: MockExercise[] = [
+    {
+      id: '1',
+      name: 'Dumbbell Bench Press',
+      sets: 3,
+      reps: '8-12',
+      restTime: 90,
+      instructions: [
+        'Lie flat on bench with dumbbells in each hand',
+        'Lower weights to chest level with control',
+        'Press weights up until arms are fully extended',
+        'Squeeze chest muscles at the top'
+      ],
+      targetMuscles: ['Chest', 'Shoulders', 'Triceps'],
+      image_url: 'https://images.pexels.com/photos/1431282/pexels-photo-1431282.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=2',
+      tips: ['Keep your core engaged', 'Control the negative movement', 'Don\'t arch your back excessively']
     },
-    exercises: [
-      {
-        id: '1',
-        name: 'Dumbbell Bench Press',
-        sets: 3,
-        reps: '8-12',
-        restTime: 90,
-        instructions: [
-          'Lie flat on bench with dumbbells in each hand',
-          'Lower weights to chest level with control',
-          'Press weights up until arms are fully extended',
-          'Squeeze chest muscles at the top'
-        ],
-        targetMuscles: ['Chest', 'Shoulders', 'Triceps'],
-        image_url: 'https://images.pexels.com/photos/1431282/pexels-photo-1431282.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=2',
-        tips: ['Keep your core engaged', 'Control the negative movement', 'Don\'t arch your back excessively']
-      },
-      {
-        id: '2',
-        name: 'Bent-Over Rows',
-        sets: 3,
-        reps: '10-15',
-        restTime: 75,
-        instructions: [
-          'Stand with feet hip-width apart, holding dumbbells',
-          'Hinge at hips, keeping back straight',
-          'Pull weights to your ribcage',
-          'Squeeze shoulder blades together'
-        ],
-        targetMuscles: ['Back', 'Biceps', 'Rear Delts'],
-        image_url: 'https://images.pexels.com/photos/1552106/pexels-photo-1552106.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=2',
-        tips: ['Keep your core tight', 'Don\'t round your back', 'Focus on squeezing your lats']
-      },
-      {
-        id: '3',
-        name: 'Goblet Squats',
-        sets: 3,
-        reps: '12-15',
-        restTime: 60,
-        instructions: [
-          'Hold dumbbell at chest level',
-          'Stand with feet shoulder-width apart',
-          'Lower into squat position',
-          'Drive through heels to return to start'
-        ],
-        targetMuscles: ['Quadriceps', 'Glutes', 'Core'],
-        image_url: 'https://images.pexels.com/photos/1552252/pexels-photo-1552252.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=2',
-        tips: ['Keep chest up', 'Go as low as mobility allows', 'Drive through your heels']
-      },
-      {
-        id: '4',
-        name: 'Overhead Press',
-        sets: 3,
-        reps: '8-10',
-        restTime: 90,
-        instructions: [
-          'Stand with dumbbells at shoulder height',
-          'Press weights overhead until arms are extended',
-          'Lower with control to starting position',
-          'Keep core engaged throughout'
-        ],
-        targetMuscles: ['Shoulders', 'Triceps', 'Core'],
-        image_url: 'https://images.pexels.com/photos/1552103/pexels-photo-1552103.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=2',
-        tips: ['Don\'t arch your back', 'Press in a straight line', 'Engage your core']
-      },
-      {
-        id: '5',
-        name: 'Romanian Deadlifts',
-        sets: 3,
-        reps: '10-12',
-        restTime: 75,
-        instructions: [
-          'Hold dumbbells in front of thighs',
-          'Hinge at hips, lowering weights',
-          'Feel stretch in hamstrings',
-          'Drive hips forward to return to start'
-        ],
-        targetMuscles: ['Hamstrings', 'Glutes', 'Lower Back'],
-        image_url: 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=2',
-        tips: ['Keep weights close to body', 'Don\'t round your back', 'Feel the stretch in hamstrings']
-      }
-    ]
-  };
+    {
+      id: '2',
+      name: 'Bent-Over Rows',
+      sets: 3,
+      reps: '10-15',
+      restTime: 75,
+      instructions: [
+        'Stand with feet hip-width apart, holding dumbbells',
+        'Hinge at hips, keeping back straight',
+        'Pull weights to your ribcage',
+        'Squeeze shoulder blades together'
+      ],
+      targetMuscles: ['Back', 'Biceps', 'Rear Delts'],
+      image_url: 'https://images.pexels.com/photos/1552106/pexels-photo-1552106.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=2',
+      tips: ['Keep your core tight', 'Don\'t round your back', 'Focus on squeezing your lats']
+    },
+    {
+      id: '3',
+      name: 'Goblet Squats',
+      sets: 3,
+      reps: '12-15',
+      restTime: 60,
+      instructions: [
+        'Hold dumbbell at chest level',
+        'Stand with feet shoulder-width apart',
+        'Lower into squat position',
+        'Drive through heels to return to start'
+      ],
+      targetMuscles: ['Quadriceps', 'Glutes', 'Core'],
+      image_url: 'https://images.pexels.com/photos/1552252/pexels-photo-1552252.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=2',
+      tips: ['Keep chest up', 'Go as low as mobility allows', 'Drive through your heels']
+    },
+    {
+      id: '4',
+      name: 'Overhead Press',
+      sets: 3,
+      reps: '8-10',
+      restTime: 90,
+      instructions: [
+        'Stand with dumbbells at shoulder height',
+        'Press weights overhead until arms are extended',
+        'Lower with control to starting position',
+        'Keep core engaged throughout'
+      ],
+      targetMuscles: ['Shoulders', 'Triceps', 'Core'],
+      image_url: 'https://images.pexels.com/photos/1552103/pexels-photo-1552103.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=2',
+      tips: ['Don\'t arch your back', 'Press in a straight line', 'Engage your core']
+    },
+    {
+      id: '5',
+      name: 'Romanian Deadlifts',
+      sets: 3,
+      reps: '10-12',
+      restTime: 75,
+      instructions: [
+        'Hold dumbbells in front of thighs',
+        'Hinge at hips, lowering weights',
+        'Feel stretch in hamstrings',
+        'Drive hips forward to return to start'
+      ],
+      targetMuscles: ['Hamstrings', 'Glutes', 'Lower Back'],
+      image_url: 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=2',
+      tips: ['Keep weights close to body', 'Don\'t round your back', 'Feel the stretch in hamstrings']
+    }
+  ];
+
+  useEffect(() => {
+    loadWorkoutTemplate();
+  }, [id]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -159,6 +134,22 @@ export default function WorkoutDetailScreen() {
     return () => clearInterval(interval);
   }, [isStarted]);
 
+  const loadWorkoutTemplate = async () => {
+    if (!id) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const template = await fetchTemplateWithExercises(id);
+      setWorkoutTemplate(template);
+    } catch (err) {
+      setError('Failed to load workout details');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -167,15 +158,56 @@ export default function WorkoutDetailScreen() {
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
-      case 'Beginner': return '#059669';
-      case 'Intermediate': return '#F59E0B';
-      case 'Advanced': return '#EF4444';
+      case 'beginner': return '#059669';
+      case 'intermediate': return '#F59E0B';
+      case 'advanced': return '#EF4444';
       default: return '#64748B';
     }
   };
 
-  const handleStartWorkout = () => {
+  const getDifficultyLabel = (difficulty: string) => {
+    return difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
+  };
+
+  const calculateCalories = (duration: number, difficulty: string) => {
+    const baseCalories = duration * 6;
+    const multiplier = difficulty === 'advanced' ? 1.3 : difficulty === 'intermediate' ? 1.1 : 0.9;
+    return Math.round(baseCalories * multiplier);
+  };
+
+  const generateParticipants = (templateId: string) => {
+    const hash = templateId.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    return Math.abs(hash % 2000) + 500;
+  };
+
+  const generateRating = (templateId: string) => {
+    const hash = templateId.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    return 4.2 + (Math.abs(hash % 80) / 100);
+  };
+
+  const handleStartWorkout = async () => {
+    if (!workoutTemplate && !id?.startsWith('mock-')) return;
+    
     setIsStarted(true);
+    
+    // Create workout session in database
+    const session = await createWorkoutSession({
+      name: workoutTemplate?.name || 'Sample Workout',
+      workout_id: workoutTemplate?.id,
+      duration: 0,
+      calories_burned: 0,
+    });
+    
+    if (session) {
+      setCurrentSessionId(session.id);
+    }
+    
     Alert.alert('Workout Started!', 'Good luck with your training session!');
   };
 
@@ -188,19 +220,102 @@ export default function WorkoutDetailScreen() {
     setWorkoutTime(0);
     setCurrentExerciseIndex(0);
     setCompletedExercises(new Set());
+    setCurrentSessionId(null);
   };
 
-  const toggleExerciseComplete = (index: number) => {
+  const handleCompleteWorkout = async () => {
+    if (currentSessionId && workoutTemplate) {
+      const calories = calculateCalories(workoutTime / 60, workoutTemplate.difficulty);
+      
+      await updateWorkoutSession(currentSessionId, {
+        duration: Math.floor(workoutTime / 60),
+        calories_burned: calories,
+      });
+      
+      Alert.alert(
+        'Workout Complete!', 
+        `Great job! You burned ${calories} calories in ${formatTime(workoutTime)}.`,
+        [
+          { text: 'OK', onPress: () => router.back() }
+        ]
+      );
+    }
+  };
+
+  const toggleExerciseComplete = async (index: number) => {
     const newCompleted = new Set(completedExercises);
     if (newCompleted.has(index)) {
       newCompleted.delete(index);
     } else {
       newCompleted.add(index);
+      
+      // Add exercise set to database if we have a session
+      if (currentSessionId) {
+        const exercise = workoutTemplate?.exercises[index] || mockExercises[index];
+        if (exercise) {
+          await addExerciseSet({
+            workout_session_id: currentSessionId,
+            exercise_id: exercise.id,
+            set_number: 1,
+            reps: workoutTemplate?.exercises[index]?.reps || undefined,
+            rest_time: workoutTemplate?.exercises[index]?.rest_time || 60,
+          });
+        }
+      }
     }
     setCompletedExercises(newCompleted);
+    
+    // Check if all exercises are completed
+    const totalExercises = workoutTemplate?.exercises.length || mockExercises.length;
+    if (newCompleted.size === totalExercises) {
+      handleCompleteWorkout();
+    }
   };
 
-  const ExerciseCard = ({ exercise, index }: { exercise: Exercise; index: number }) => {
+  if (loading) {
+    return <LoadingSpinner message="Loading workout details..." />;
+  }
+
+  if (error && !id?.startsWith('mock-')) {
+    return <ErrorMessage message={error} onRetry={loadWorkoutTemplate} />;
+  }
+
+  // Use mock data if no template found or if it's a mock ID
+  const displayData = workoutTemplate || {
+    id: id || 'mock-1',
+    name: 'Full Body Strength Training',
+    description: 'A comprehensive strength training workout targeting all major muscle groups. Perfect for building lean muscle mass and improving overall strength.',
+    difficulty: 'intermediate' as const,
+    estimated_duration: 45,
+    target_muscles: ['Chest', 'Back', 'Legs', 'Arms', 'Core'],
+    equipment_needed: ['Dumbbells', 'Barbell', 'Bench'],
+    category: 'strength',
+    is_public: true,
+    created_by: null,
+    image_url: 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=800&h=400&dpr=2',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    exercises: []
+  };
+
+  const displayExercises = workoutTemplate?.exercises.length ? 
+    workoutTemplate.exercises.map(ex => ({
+      id: ex.exercise.id,
+      name: ex.exercise.name,
+      sets: ex.sets,
+      reps: ex.reps?.toString() || '8-12',
+      restTime: ex.rest_time,
+      instructions: ex.exercise.instructions || ['Follow proper form', 'Control the movement', 'Focus on the target muscles'],
+      targetMuscles: ex.exercise.primary_muscles || ['Target Muscles'],
+      image_url: ex.exercise.thumbnail_url || 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=2',
+      tips: ex.exercise.tips?.split('\n') || ['Focus on proper form', 'Control the movement']
+    })) : mockExercises;
+
+  const calories = calculateCalories(displayData.estimated_duration, displayData.difficulty);
+  const participants = generateParticipants(displayData.id);
+  const rating = generateRating(displayData.id);
+
+  const ExerciseCard = ({ exercise, index }: { exercise: any; index: number }) => {
     const isCompleted = completedExercises.has(index);
     const isCurrent = index === currentExerciseIndex;
 
@@ -243,7 +358,7 @@ export default function WorkoutDetailScreen() {
               <Text style={styles.exerciseStatText}>{exercise.restTime}s rest</Text>
             </View>
             <View style={styles.muscleTargets}>
-              {exercise.targetMuscles.slice(0, 3).map((muscle, idx) => (
+              {exercise.targetMuscles.slice(0, 3).map((muscle: string, idx: number) => (
                 <View key={idx} style={styles.muscleTag}>
                   <Text style={styles.muscleTagText}>{muscle}</Text>
                 </View>
@@ -255,16 +370,16 @@ export default function WorkoutDetailScreen() {
         {isCurrent && (
           <View style={styles.exerciseDetails}>
             <Text style={styles.instructionsTitle}>Instructions:</Text>
-            {exercise.instructions.map((instruction, idx) => (
+            {exercise.instructions.map((instruction: string, idx: number) => (
               <Text key={idx} style={styles.instructionText}>
                 {idx + 1}. {instruction}
               </Text>
             ))}
             
-            {exercise.tips.length > 0 && (
+            {exercise.tips && exercise.tips.length > 0 && (
               <>
                 <Text style={styles.tipsTitle}>Tips:</Text>
-                {exercise.tips.map((tip, idx) => (
+                {exercise.tips.map((tip: string, idx: number) => (
                   <View key={idx} style={styles.tipRow}>
                     <Info size={14} color="#2563EB" />
                     <Text style={styles.tipText}>{tip}</Text>
@@ -307,20 +422,20 @@ export default function WorkoutDetailScreen() {
         {/* Workout Hero */}
         <View style={styles.heroSection}>
           <Image 
-            source={{ uri: workoutDetail.image_url }}
+            source={{ uri: displayData.image_url || 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=800&h=400&dpr=2' }}
             style={styles.heroImage}
             resizeMode="cover"
           />
           <View style={styles.heroOverlay}>
             <View style={styles.heroContent}>
-              <Text style={styles.workoutTitle}>{workoutDetail.name}</Text>
+              <Text style={styles.workoutTitle}>{displayData.name}</Text>
               <View style={styles.heroStats}>
-                <View style={[styles.difficultyBadge, { backgroundColor: getDifficultyColor(workoutDetail.difficulty) }]}>
-                  <Text style={styles.difficultyText}>{workoutDetail.difficulty}</Text>
+                <View style={[styles.difficultyBadge, { backgroundColor: getDifficultyColor(displayData.difficulty) }]}>
+                  <Text style={styles.difficultyText}>{getDifficultyLabel(displayData.difficulty)}</Text>
                 </View>
                 <View style={styles.ratingContainer}>
                   <Star size={16} color="#F59E0B" fill="#F59E0B" />
-                  <Text style={styles.ratingText}>{workoutDetail.rating}</Text>
+                  <Text style={styles.ratingText}>{rating.toFixed(1)}</Text>
                 </View>
               </View>
             </View>
@@ -357,40 +472,30 @@ export default function WorkoutDetailScreen() {
 
         {/* Workout Info */}
         <View style={styles.workoutInfo}>
-          <Text style={styles.workoutDescription}>{workoutDetail.description}</Text>
+          <Text style={styles.workoutDescription}>
+            {displayData.description || 'A comprehensive workout designed to help you reach your fitness goals.'}
+          </Text>
           
           <View style={styles.statsGrid}>
             <View style={styles.statItem}>
               <Clock size={20} color="#2563EB" />
-              <Text style={styles.statValue}>{workoutDetail.duration} min</Text>
+              <Text style={styles.statValue}>{displayData.estimated_duration} min</Text>
               <Text style={styles.statLabel}>Duration</Text>
             </View>
             <View style={styles.statItem}>
               <Target size={20} color="#059669" />
-              <Text style={styles.statValue}>{workoutDetail.exercises.length}</Text>
+              <Text style={styles.statValue}>{displayExercises.length}</Text>
               <Text style={styles.statLabel}>Exercises</Text>
             </View>
             <View style={styles.statItem}>
               <Flame size={20} color="#EA580C" />
-              <Text style={styles.statValue}>{workoutDetail.calories}</Text>
+              <Text style={styles.statValue}>{calories}</Text>
               <Text style={styles.statLabel}>Calories</Text>
             </View>
             <View style={styles.statItem}>
               <Users size={20} color="#8B5CF6" />
-              <Text style={styles.statValue}>{workoutDetail.participants}</Text>
+              <Text style={styles.statValue}>{participants}</Text>
               <Text style={styles.statLabel}>Users</Text>
-            </View>
-          </View>
-
-          {/* Tags */}
-          <View style={styles.tagsSection}>
-            <Text style={styles.sectionTitle}>Focus Areas</Text>
-            <View style={styles.tagsContainer}>
-              {workoutDetail.tags.map((tag, index) => (
-                <View key={index} style={styles.tag}>
-                  <Text style={styles.tagText}>{tag}</Text>
-                </View>
-              ))}
             </View>
           </View>
 
@@ -398,7 +503,7 @@ export default function WorkoutDetailScreen() {
           <View style={styles.musclesSection}>
             <Text style={styles.sectionTitle}>Target Muscles</Text>
             <View style={styles.musclesContainer}>
-              {workoutDetail.targetMuscles.map((muscle, index) => (
+              {displayData.target_muscles.map((muscle, index) => (
                 <View key={index} style={styles.muscleChip}>
                   <Text style={styles.muscleChipText}>{muscle}</Text>
                 </View>
@@ -406,19 +511,16 @@ export default function WorkoutDetailScreen() {
             </View>
           </View>
 
-          {/* Instructor */}
-          <View style={styles.instructorSection}>
-            <Text style={styles.sectionTitle}>Instructor</Text>
-            <View style={styles.instructorCard}>
-              <Image 
-                source={{ uri: workoutDetail.instructor.image_url }}
-                style={styles.instructorImage}
-                resizeMode="cover"
-              />
-              <View style={styles.instructorInfo}>
-                <Text style={styles.instructorName}>{workoutDetail.instructor.name}</Text>
-                <Text style={styles.instructorSpecialization}>{workoutDetail.instructor.specialization}</Text>
-              </View>
+          {/* Equipment */}
+          <View style={styles.equipmentSection}>
+            <Text style={styles.sectionTitle}>Equipment Needed</Text>
+            <View style={styles.equipmentContainer}>
+              {displayData.equipment_needed.map((equipment, index) => (
+                <View key={index} style={styles.equipmentChip}>
+                  <Dumbbell size={14} color="#2563EB" />
+                  <Text style={styles.equipmentChipText}>{equipment}</Text>
+                </View>
+              ))}
             </View>
           </View>
         </View>
@@ -426,13 +528,13 @@ export default function WorkoutDetailScreen() {
         {/* Exercises List */}
         <View style={styles.exercisesSection}>
           <View style={styles.exercisesHeader}>
-            <Text style={styles.sectionTitle}>Exercises ({workoutDetail.exercises.length})</Text>
+            <Text style={styles.sectionTitle}>Exercises ({displayExercises.length})</Text>
             <Text style={styles.progressText}>
-              {completedExercises.size}/{workoutDetail.exercises.length} completed
+              {completedExercises.size}/{displayExercises.length} completed
             </Text>
           </View>
           
-          {workoutDetail.exercises.map((exercise, index) => (
+          {displayExercises.map((exercise, index) => (
             <ExerciseCard key={exercise.id} exercise={exercise} index={index} />
           ))}
         </View>
@@ -447,6 +549,15 @@ export default function WorkoutDetailScreen() {
               <Play size={20} color="#FFFFFF" />
               <Text style={styles.startWorkoutText}>Start Workout</Text>
             </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Database Status */}
+        {!workoutTemplate && (
+          <View style={styles.databaseNote}>
+            <Text style={styles.databaseNoteText}>
+              💡 Showing sample workout. Connect to your database to see real workout templates with exercises.
+            </Text>
           </View>
         )}
       </ScrollView>
@@ -509,7 +620,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    background: 'linear-gradient(transparent, rgba(0,0,0,0.7))',
     backgroundColor: 'rgba(0,0,0,0.4)',
     padding: 20,
   },
@@ -639,27 +749,6 @@ const styles = StyleSheet.create({
     color: '#1E293B',
     marginBottom: 12,
   },
-  tagsSection: {
-    marginBottom: 24,
-  },
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  tag: {
-    backgroundColor: '#EFF6FF',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#DBEAFE',
-  },
-  tagText: {
-    fontSize: 14,
-    fontFamily: 'Inter-Medium',
-    color: '#2563EB',
-  },
   musclesSection: {
     marginBottom: 24,
   },
@@ -681,35 +770,29 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Medium',
     color: '#059669',
   },
-  instructorSection: {
+  equipmentSection: {
     marginBottom: 0,
   },
-  instructorCard: {
+  equipmentContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  equipmentChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
+    gap: 6,
   },
-  instructorImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginRight: 16,
-  },
-  instructorInfo: {
-    flex: 1,
-  },
-  instructorName: {
-    fontSize: 18,
-    fontFamily: 'Inter-SemiBold',
-    color: '#1E293B',
-    marginBottom: 4,
-  },
-  instructorSpecialization: {
+  equipmentChipText: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: '#64748B',
+    fontFamily: 'Inter-Medium',
+    color: '#2563EB',
   },
   exercisesSection: {
     paddingHorizontal: 20,
@@ -865,5 +948,20 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: 'Inter-SemiBold',
     color: '#FFFFFF',
+  },
+  databaseNote: {
+    margin: 20,
+    padding: 16,
+    backgroundColor: '#FEF3C7',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  databaseNoteText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+    color: '#92400E',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });
