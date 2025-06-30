@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Home, Dumbbell, BarChart2, User } from 'lucide-react-native';
+import { Chrome as Home, Dumbbell, ChartBar as BarChart2, User } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
