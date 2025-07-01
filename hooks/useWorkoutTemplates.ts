@@ -94,15 +94,14 @@ export function useWorkoutTemplates(equipmentName?: string) {
       
       // If no templates found, let's check if there are any templates at all
       if (!data || data.length === 0) {
-        const { data: allTemplates, error: allError } = await supabase
+        const { data: allTemplates, count, error: allError } = await supabase
           .from('workout_templates')
-          .select('count(*)')
-          .single();
+          .select('*', { count: 'exact' });
         
         if (allError) {
-          console.error('Error checking total templates:', allError);
+          console.error('Error checking total templates:', allError.message);
         } else {
-          console.log('Total templates in database:', allTemplates?.count || 0);
+          console.log('Total templates in database:', count || 0);
         }
       }
       
