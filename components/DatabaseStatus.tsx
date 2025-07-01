@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { AlertCircle, CheckCircle, RefreshCw } from 'lucide-react-native';
+import { CircleAlert as AlertCircle, CircleCheck as CheckCircle, RefreshCw } from 'lucide-react-native';
 import { testConnection } from '@/lib/supabase';
 
 interface DatabaseStatusProps {
