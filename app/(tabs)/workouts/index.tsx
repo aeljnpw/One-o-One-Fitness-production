@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Dumbbell, Clock, Flame, Filter, Search, ChevronRight } from 'lucide-react-native';
+import { Dumbbell, Clock, Flame, Filter, Search, ChevronRight, AlertCircle, RefreshCw } from 'lucide-react-native';
 import { useEquipment } from '@/hooks/useEquipment';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ErrorMessage } from '@/components/ErrorMessage';
@@ -23,6 +23,11 @@ export default function WorkoutsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
 
+  // Debug logging
+  console.log('Workouts Screen - Equipment data:', equipment?.length || 0);
+  console.log('Workouts Screen - Loading:', loading);
+  console.log('Workouts Screen - Error:', error);
+
   // Transform equipment data to include workout information
   const equipmentWithWorkouts: EquipmentWithWorkouts[] = equipment.map(item => ({
     ...item,
@@ -42,15 +47,25 @@ export default function WorkoutsScreen() {
     return matchesSearch && matchesCategory;
   });
 
+  console.log('Filtered equipment count:', filteredEquipment.length);
+
   if (loading) {
     return <LoadingSpinner message="Loading equipment..." />;
   }
 
   if (error) {
-    return <ErrorMessage message={error} onRetry={refetch} />;
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Equipment & Workouts</Text>
+        </View>
+        <ErrorMessage message={error} onRetry={refetch} />
+      </SafeAreaView>
+    );
   }
 
   const handleEquipmentPress = (equipmentId: string) => {
+    console.log('Navigating to equipment:', equipmentId);
     router.push(`/workouts/equipment/${equipmentId}`);
   };
 
@@ -129,6 +144,21 @@ export default function WorkoutsScreen() {
     </ScrollView>
   );
 
+  // Debug info component
+  const DebugInfo = () => (
+    <View style={styles.debugInfo}>
+      <Text style={styles.debugText}>
+        Equipment loaded: {equipment.length} | Filtered: {filteredEquipment.length}
+      </Text>
+      {equipment.length === 0 && (
+        <TouchableOpacity style={styles.retryButton} onPress={refetch}>
+          <RefreshCw size={16} color="#2563EB" />
+          <Text style={styles.retryText}>Retry Loading</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -156,6 +186,9 @@ export default function WorkoutsScreen() {
       {/* Category Filter */}
       <CategoryFilter />
 
+      {/* Debug Info */}
+      <DebugInfo />
+
       {/* Stats Overview */}
       <View style={styles.statsOverview}>
         <View style={styles.statCard}>
@@ -178,11 +211,24 @@ export default function WorkoutsScreen() {
       <ScrollView 
         style={styles.content}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.contentContainer}
       >
-        {filteredEquipment.length === 0 ? (
+        {equipment.length === 0 ? (
+          <View style={styles.emptyState}>
+            <AlertCircle size={48} color="#94A3B8" />
+            <Text style={styles.emptyStateTitle}>No equipment found</Text>
+            <Text style={styles.emptyStateText}>
+              Check your database connection or add equipment to your database
+            </Text>
+            <TouchableOpacity style={styles.retryButton} onPress={refetch}>
+              <RefreshCw size={16} color="#FFFFFF" />
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : filteredEquipment.length === 0 ? (
           <View style={styles.emptyState}>
             <Dumbbell size={48} color="#94A3B8" />
-            <Text style={styles.emptyStateTitle}>No equipment found</Text>
+            <Text style={styles.emptyStateTitle}>No equipment matches your search</Text>
             <Text style={styles.emptyStateText}>
               Try adjusting your search or filter criteria
             </Text>
@@ -252,7 +298,7 @@ const styles = StyleSheet.create({
     color: '#1E293B',
   },
   categoryFilter: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   categoryFilterContent: {
     paddingHorizontal: 20,
@@ -276,6 +322,43 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   activeCategoryButtonText: {
+    color: '#FFFFFF',
+  },
+  debugInfo: {
+    backgroundColor: '#FEF3C7',
+    marginHorizontal: 20,
+    marginBottom: 16,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  debugText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    color: '#92400E',
+    flex: 1,
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    gap: 4,
+  },
+  retryText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    color: '#FFFFFF',
+  },
+  retryButtonText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
     color: '#FFFFFF',
   },
   statsOverview: {
@@ -311,6 +394,9 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 20,
+  },
+  contentContainer: {
+    paddingBottom: 20,
   },
   equipmentCard: {
     backgroundColor: '#FFFFFF',
@@ -394,6 +480,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 60,
+    paddingHorizontal: 20,
   },
   emptyStateTitle: {
     fontSize: 20,
@@ -401,6 +488,7 @@ const styles = StyleSheet.create({
     color: '#1E293B',
     marginTop: 16,
     marginBottom: 8,
+    textAlign: 'center',
   },
   emptyStateText: {
     fontSize: 16,
@@ -408,5 +496,6 @@ const styles = StyleSheet.create({
     color: '#64748B',
     textAlign: 'center',
     lineHeight: 24,
+    marginBottom: 24,
   },
 });
