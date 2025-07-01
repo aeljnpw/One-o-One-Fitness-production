@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Play, Clock, Flame, Users, Star, Bookmark, Share, Target, TrendingUp, Dumbbell, ChevronRight, AlertCircle, RefreshCw, Plus } from 'lucide-react-native';
+import { ArrowLeft, Play, Clock, Flame, Users, Star, Bookmark, Share, Target, TrendingUp, Dumbbell, ChevronRight, CircleAlert as AlertCircle, RefreshCw, Plus } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEquipment } from '@/hooks/useEquipment';
 import { useWorkoutTemplates, WorkoutTemplate } from '@/hooks/useWorkoutTemplates';
