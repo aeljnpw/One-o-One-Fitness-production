@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Play, Pause, Square, Clock, Target, Dumbbell, Info, CheckCircle, Circle, Plus, Minus, RotateCcw, Save } from 'lucide-react-native';
+import { ArrowLeft, Play, Pause, Square, Clock, Target, Dumbbell, Info, CircleCheck as CheckCircle, Circle, Plus, Minus, RotateCcw, Save } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useExercises } from '@/hooks/useExercises';
 import { useWorkoutSessions } from '@/hooks/useWorkoutSessions';
