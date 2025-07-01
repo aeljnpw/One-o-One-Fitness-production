@@ -4,41 +4,36 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Play, Clock, Flame, Users, Star, Bookmark, Share, Target, TrendingUp, Dumbbell, ChevronRight, CircleAlert as AlertCircle, RefreshCw, Plus } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEquipment } from '@/hooks/useEquipment';
-import { useWorkoutTemplates, WorkoutTemplate } from '@/hooks/useWorkoutTemplates';
+import { useExercises } from '@/hooks/useExercises';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ErrorMessage } from '@/components/ErrorMessage';
 
 export default function EquipmentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { equipment, loading: equipmentLoading, error: equipmentError, refetch: refetchEquipment } = useEquipment();
+  const { exercises, loading: exercisesLoading, error: exercisesError, refetch: refetchExercises } = useExercises();
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('All');
   const [isBookmarked, setIsBookmarked] = useState(false);
 
   const equipmentItem = equipment.find(item => item.id === id);
-  const equipmentName = equipmentItem?.name;
-
-  const { 
-    templates, 
-    loading: templatesLoading, 
-    error: templatesError,
-    refetch: refetchTemplates 
-  } = useWorkoutTemplates(equipmentName);
-
+  
+  // Filter exercises by equipment ID
+  const equipmentExercises = exercises.filter(exercise => exercise.equipment_id === id);
+  
   const difficulties = ['All', 'beginner', 'intermediate', 'advanced'];
 
-  const filteredWorkouts = templates.filter(workout => 
-    selectedDifficulty === 'All' || workout.difficulty === selectedDifficulty
+  const filteredExercises = equipmentExercises.filter(exercise => 
+    selectedDifficulty === 'All' || exercise.difficulty === selectedDifficulty
   );
 
   useEffect(() => {
     console.log('Equipment item:', equipmentItem);
-    console.log('Equipment name:', equipmentName);
-    console.log('Templates loaded:', templates.length);
-    console.log('Templates error:', templatesError);
-  }, [equipmentItem, equipmentName, templates, templatesError]);
+    console.log('Equipment exercises:', equipmentExercises.length);
+    console.log('Filtered exercises:', filteredExercises.length);
+  }, [equipmentItem, equipmentExercises, filteredExercises]);
 
-  if (equipmentLoading || templatesLoading) {
-    return <LoadingSpinner message="Loading equipment and workouts..." />;
+  if (equipmentLoading || exercisesLoading) {
+    return <LoadingSpinner message="Loading equipment and exercises..." />;
   }
 
   if (equipmentError || !equipmentItem) {
@@ -58,60 +53,62 @@ export default function EquipmentDetailScreen() {
     return difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
   };
 
-  const calculateCalories = (duration: number, difficulty: string) => {
-    const baseCalories = duration * 6; // 6 calories per minute base
+  const calculateCalories = (difficulty: string) => {
+    const baseCalories = 200; // Base calories for exercise
     const multiplier = difficulty === 'advanced' ? 1.3 : difficulty === 'intermediate' ? 1.1 : 0.9;
     return Math.round(baseCalories * multiplier);
   };
 
-  const generateParticipants = (templateId: string) => {
-    // Generate consistent participant count based on template ID
-    const hash = templateId.split('').reduce((a, b) => {
+  const generateParticipants = (exerciseId: string) => {
+    const hash = exerciseId.split('').reduce((a, b) => {
       a = ((a << 5) - a) + b.charCodeAt(0);
       return a & a;
     }, 0);
-    return Math.abs(hash % 2000) + 500;
+    return Math.abs(hash % 1000) + 100;
   };
 
-  const generateRating = (templateId: string) => {
-    // Generate consistent rating based on template ID
-    const hash = templateId.split('').reduce((a, b) => {
+  const generateRating = (exerciseId: string) => {
+    const hash = exerciseId.split('').reduce((a, b) => {
       a = ((a << 5) - a) + b.charCodeAt(0);
       return a & a;
     }, 0);
-    return 4.2 + (Math.abs(hash % 80) / 100); // Rating between 4.2 and 5.0
+    return 4.0 + (Math.abs(hash % 100) / 100); // Rating between 4.0 and 5.0
   };
 
-  const handleStartWorkout = (templateId: string) => {
-    router.push(`/workouts/workout/${templateId}`);
+  const handleStartExercise = (exerciseId: string) => {
+    Alert.alert(
+      'Start Exercise',
+      'Exercise details and workout tracking will be implemented here.',
+      [{ text: 'OK' }]
+    );
   };
 
-  const handleRetryTemplates = () => {
-    refetchTemplates();
+  const handleRetryExercises = () => {
+    refetchExercises();
   };
 
-  const WorkoutCard = ({ workout }: { workout: WorkoutTemplate }) => {
-    const calories = calculateCalories(workout.estimated_duration, workout.difficulty);
-    const participants = generateParticipants(workout.id);
-    const rating = generateRating(workout.id);
+  const ExerciseCard = ({ exercise }: { exercise: any }) => {
+    const calories = calculateCalories(exercise.difficulty);
+    const participants = generateParticipants(exercise.id);
+    const rating = generateRating(exercise.id);
 
     return (
       <TouchableOpacity 
-        style={styles.workoutCard}
-        onPress={() => handleStartWorkout(workout.id)}
+        style={styles.exerciseCard}
+        onPress={() => handleStartExercise(exercise.id)}
         activeOpacity={0.7}
       >
         <Image 
-          source={{ uri: workout.image_url || 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=2' }}
-          style={styles.workoutImage}
+          source={{ uri: exercise.thumbnail_url || 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=2' }}
+          style={styles.exerciseImage}
           resizeMode="cover"
         />
-        <View style={styles.workoutContent}>
-          <View style={styles.workoutHeader}>
-            <View style={styles.workoutTitleRow}>
-              <Text style={styles.workoutTitle}>{workout.name}</Text>
-              <View style={[styles.difficultyBadge, { backgroundColor: getDifficultyColor(workout.difficulty) }]}>
-                <Text style={styles.difficultyText}>{getDifficultyLabel(workout.difficulty)}</Text>
+        <View style={styles.exerciseContent}>
+          <View style={styles.exerciseHeader}>
+            <View style={styles.exerciseTitleRow}>
+              <Text style={styles.exerciseTitle}>{exercise.name}</Text>
+              <View style={[styles.difficultyBadge, { backgroundColor: getDifficultyColor(exercise.difficulty) }]}>
+                <Text style={styles.difficultyText}>{getDifficultyLabel(exercise.difficulty)}</Text>
               </View>
             </View>
             <View style={styles.ratingRow}>
@@ -121,18 +118,18 @@ export default function EquipmentDetailScreen() {
             </View>
           </View>
           
-          <Text style={styles.workoutDescription} numberOfLines={2}>
-            {workout.description || `A comprehensive workout using ${equipmentName}`}
+          <Text style={styles.exerciseDescription} numberOfLines={2}>
+            {exercise.proper_form || `A ${exercise.difficulty} level exercise targeting ${exercise.muscle_group}`}
           </Text>
           
-          <View style={styles.workoutStats}>
-            <View style={styles.statItem}>
-              <Clock size={14} color="#64748B" />
-              <Text style={styles.statText}>{workout.estimated_duration} min</Text>
-            </View>
+          <View style={styles.exerciseStats}>
             <View style={styles.statItem}>
               <Target size={14} color="#64748B" />
-              <Text style={styles.statText}>{workout.target_muscles.length} muscles</Text>
+              <Text style={styles.statText}>{exercise.muscle_group}</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Dumbbell size={14} color="#64748B" />
+              <Text style={styles.statText}>{exercise.type || 'Exercise'}</Text>
             </View>
             <View style={styles.statItem}>
               <Flame size={14} color="#64748B" />
@@ -141,19 +138,23 @@ export default function EquipmentDetailScreen() {
           </View>
           
           <View style={styles.tagsContainer}>
-            {workout.target_muscles.slice(0, 3).map((muscle, index) => (
+            {exercise.primary_muscles?.slice(0, 3).map((muscle: string, index: number) => (
               <View key={index} style={styles.tag}>
                 <Text style={styles.tagText}>{muscle}</Text>
               </View>
-            ))}
+            )) || (
+              <View style={styles.tag}>
+                <Text style={styles.tagText}>{exercise.muscle_group}</Text>
+              </View>
+            )}
           </View>
           
           <TouchableOpacity 
             style={styles.startButton}
-            onPress={() => handleStartWorkout(workout.id)}
+            onPress={() => handleStartExercise(exercise.id)}
           >
             <Play size={16} color="#FFFFFF" />
-            <Text style={styles.startButtonText}>Start Workout</Text>
+            <Text style={styles.startButtonText}>Start Exercise</Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -219,54 +220,54 @@ export default function EquipmentDetailScreen() {
         <View style={styles.statsSection}>
           <View style={styles.statCard}>
             <TrendingUp size={24} color="#2563EB" />
-            <Text style={styles.statValue}>{templates.length}</Text>
-            <Text style={styles.statLabel}>Workouts</Text>
+            <Text style={styles.statValue}>{equipmentExercises.length}</Text>
+            <Text style={styles.statLabel}>Exercises</Text>
           </View>
           <View style={styles.statCard}>
             <Users size={24} color="#059669" />
             <Text style={styles.statValue}>
-              {templates.reduce((sum, w) => sum + generateParticipants(w.id), 0)}
+              {equipmentExercises.reduce((sum, ex) => sum + generateParticipants(ex.id), 0)}
             </Text>
             <Text style={styles.statLabel}>Users</Text>
           </View>
           <View style={styles.statCard}>
             <Star size={24} color="#F59E0B" />
             <Text style={styles.statValue}>
-              {templates.length > 0 ? (templates.reduce((sum, w) => sum + generateRating(w.id), 0) / templates.length).toFixed(1) : '0.0'}
+              {equipmentExercises.length > 0 ? (equipmentExercises.reduce((sum, ex) => sum + generateRating(ex.id), 0) / equipmentExercises.length).toFixed(1) : '0.0'}
             </Text>
             <Text style={styles.statLabel}>Rating</Text>
           </View>
         </View>
 
         {/* Database Connection Status */}
-        {templates.length === 0 && !templatesError && (
+        {equipmentExercises.length === 0 && !exercisesError && (
           <View style={styles.connectionStatus}>
             <View style={styles.statusIcon}>
               <AlertCircle size={20} color="#F59E0B" />
             </View>
             <View style={styles.statusContent}>
-              <Text style={styles.statusTitle}>No Workouts Found</Text>
+              <Text style={styles.statusTitle}>No Exercises Found</Text>
               <Text style={styles.statusText}>
-                No workout templates found for {equipmentName}. Create some templates in your database or check your connection.
+                No exercises found for {equipmentItem.name}. Add exercises to your database with equipment_id: {id}
               </Text>
             </View>
             <TouchableOpacity 
               style={styles.retryButton}
-              onPress={handleRetryTemplates}
+              onPress={handleRetryExercises}
             >
               <RefreshCw size={16} color="#2563EB" />
             </TouchableOpacity>
           </View>
         )}
 
-        {/* Templates Error */}
-        {templatesError && (
+        {/* Exercises Error */}
+        {exercisesError && (
           <View style={styles.errorBanner}>
             <AlertCircle size={20} color="#EF4444" />
-            <Text style={styles.errorText}>{templatesError}</Text>
+            <Text style={styles.errorText}>{exercisesError}</Text>
             <TouchableOpacity 
               style={styles.retryButton}
-              onPress={handleRetryTemplates}
+              onPress={handleRetryExercises}
             >
               <RefreshCw size={16} color="#EF4444" />
             </TouchableOpacity>
@@ -274,9 +275,9 @@ export default function EquipmentDetailScreen() {
         )}
 
         {/* Difficulty Filter */}
-        {templates.length > 0 && (
+        {equipmentExercises.length > 0 && (
           <View style={styles.filterSection}>
-            <Text style={styles.sectionTitle}>Available Workouts</Text>
+            <Text style={styles.sectionTitle}>Available Exercises</Text>
             <ScrollView 
               horizontal 
               showsHorizontalScrollIndicator={false}
@@ -304,39 +305,41 @@ export default function EquipmentDetailScreen() {
           </View>
         )}
 
-        {/* Workouts List */}
-        {filteredWorkouts.length > 0 && (
-          <View style={styles.workoutsSection}>
-            {filteredWorkouts.map((workout) => (
-              <WorkoutCard key={workout.id} workout={workout} />
+        {/* Exercises List */}
+        {filteredExercises.length > 0 && (
+          <View style={styles.exercisesSection}>
+            {filteredExercises.map((exercise) => (
+              <ExerciseCard key={exercise.id} exercise={exercise} />
             ))}
           </View>
         )}
 
         {/* Empty State for filtered results */}
-        {templates.length > 0 && filteredWorkouts.length === 0 && (
+        {equipmentExercises.length > 0 && filteredExercises.length === 0 && (
           <View style={styles.emptyState}>
             <Target size={48} color="#94A3B8" />
-            <Text style={styles.emptyStateTitle}>No workouts found</Text>
+            <Text style={styles.emptyStateTitle}>No exercises found</Text>
             <Text style={styles.emptyStateText}>
               Try selecting a different difficulty level
             </Text>
           </View>
         )}
 
-        {/* Create Workout Suggestion */}
-        {templates.length === 0 && !templatesError && (
-          <View style={styles.createWorkoutSection}>
-            <View style={styles.createWorkoutCard}>
+        {/* Create Exercise Suggestion */}
+        {equipmentExercises.length === 0 && !exercisesError && (
+          <View style={styles.createExerciseSection}>
+            <View style={styles.createExerciseCard}>
               <Plus size={48} color="#2563EB" />
-              <Text style={styles.createWorkoutTitle}>Create Your First Workout</Text>
-              <Text style={styles.createWorkoutText}>
-                Start building workout templates for {equipmentName} in your database to see them here.
+              <Text style={styles.createExerciseTitle}>Add Your First Exercise</Text>
+              <Text style={styles.createExerciseText}>
+                Start adding exercises for {equipmentItem.name} to your database. Set the equipment_id to {id} when creating exercises.
               </Text>
-              <TouchableOpacity style={styles.createWorkoutButton}>
-                <Plus size={16} color="#FFFFFF" />
-                <Text style={styles.createWorkoutButtonText}>Add Workout Template</Text>
-              </TouchableOpacity>
+              <View style={styles.createExerciseInfo}>
+                <Text style={styles.createExerciseInfoTitle}>Database Info:</Text>
+                <Text style={styles.createExerciseInfoText}>Table: exercises</Text>
+                <Text style={styles.createExerciseInfoText}>Equipment ID: {id}</Text>
+                <Text style={styles.createExerciseInfoText}>Equipment: {equipmentItem.name}</Text>
+              </View>
             </View>
           </View>
         )}
@@ -562,11 +565,11 @@ const styles = StyleSheet.create({
   activeDifficultyButtonText: {
     color: '#FFFFFF',
   },
-  workoutsSection: {
+  exercisesSection: {
     paddingHorizontal: 20,
     paddingBottom: 32,
   },
-  workoutCard: {
+  exerciseCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     marginBottom: 16,
@@ -577,23 +580,23 @@ const styles = StyleSheet.create({
     elevation: 4,
     overflow: 'hidden',
   },
-  workoutImage: {
+  exerciseImage: {
     width: '100%',
     height: 160,
   },
-  workoutContent: {
+  exerciseContent: {
     padding: 16,
   },
-  workoutHeader: {
+  exerciseHeader: {
     marginBottom: 12,
   },
-  workoutTitleRow: {
+  exerciseTitleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 8,
   },
-  workoutTitle: {
+  exerciseTitle: {
     fontSize: 18,
     fontFamily: 'Inter-SemiBold',
     color: '#1E293B',
@@ -625,14 +628,14 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     color: '#64748B',
   },
-  workoutDescription: {
+  exerciseDescription: {
     fontSize: 14,
     fontFamily: 'Inter-Regular',
     color: '#64748B',
     lineHeight: 20,
     marginBottom: 12,
   },
-  workoutStats: {
+  exerciseStats: {
     flexDirection: 'row',
     gap: 16,
     marginBottom: 12,
@@ -697,11 +700,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
   },
-  createWorkoutSection: {
+  createExerciseSection: {
     paddingHorizontal: 20,
     paddingBottom: 32,
   },
-  createWorkoutCard: {
+  createExerciseCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 32,
@@ -712,7 +715,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  createWorkoutTitle: {
+  createExerciseTitle: {
     fontSize: 20,
     fontFamily: 'Inter-SemiBold',
     color: '#1E293B',
@@ -720,7 +723,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     textAlign: 'center',
   },
-  createWorkoutText: {
+  createExerciseText: {
     fontSize: 16,
     fontFamily: 'Inter-Regular',
     color: '#64748B',
@@ -728,18 +731,22 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     marginBottom: 24,
   },
-  createWorkoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#2563EB',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+  createExerciseInfo: {
+    backgroundColor: '#F8FAFC',
+    padding: 16,
     borderRadius: 12,
-    gap: 8,
+    width: '100%',
   },
-  createWorkoutButtonText: {
-    fontSize: 16,
+  createExerciseInfoTitle: {
+    fontSize: 14,
     fontFamily: 'Inter-SemiBold',
-    color: '#FFFFFF',
+    color: '#1E293B',
+    marginBottom: 8,
+  },
+  createExerciseInfoText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: '#64748B',
+    marginBottom: 4,
   },
 });
