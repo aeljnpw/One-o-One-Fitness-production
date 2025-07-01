@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Dumbbell, Clock, Flame, Filter, Search, ChevronRight, AlertCircle, RefreshCw } from 'lucide-react-native';
+import { Dumbbell, Clock, Flame, Filter, Search, ChevronRight, CircleAlert as AlertCircle, RefreshCw } from 'lucide-react-native';
 import { useEquipment } from '@/hooks/useEquipment';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ErrorMessage } from '@/components/ErrorMessage';
