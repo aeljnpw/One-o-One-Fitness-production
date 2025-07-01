@@ -189,10 +189,22 @@ export function useWorkoutSessions() {
         throw new Error('Supabase client not initialized');
       }
 
+      // Get the current authenticated user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
+        throw new Error(`Authentication error: ${userError.message}`);
+      }
+      
+      if (!user) {
+        throw new Error('No authenticated user found');
+      }
+
       const { data, error } = await supabase
         .from('workout_sessions')
         .insert([{
           ...sessionData,
+          user_id: user.id, // Include the authenticated user's ID
           duration: sessionData.duration || 0,
           calories_burned: sessionData.calories_burned || 0,
         }])
