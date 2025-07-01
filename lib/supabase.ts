@@ -21,6 +21,7 @@ export const getSupabase = () => {
   if (!supabaseInstance) {
     if (!supabaseUrl || !supabaseAnonKey) {
       console.error('Supabase configuration is missing. Please set SUPABASE_URL and SUPABASE_ANON_KEY in your environment variables or app.config.js');
+      console.log('Current config:', { supabaseUrl: !!supabaseUrl, supabaseAnonKey: !!supabaseAnonKey });
       return null;
     }
     try {
@@ -32,6 +33,7 @@ export const getSupabase = () => {
         }
       });
       console.log('Supabase client initialized successfully');
+      console.log('Supabase URL:', supabaseUrl);
     } catch (error) {
       console.error('Error initializing Supabase client:', error);
       return null;
@@ -41,6 +43,34 @@ export const getSupabase = () => {
 };
 
 export const supabase = getSupabase();
+
+// Test database connection
+export const testConnection = async () => {
+  const client = getSupabase();
+  if (!client) {
+    console.error('Cannot test connection: Supabase client not initialized');
+    return false;
+  }
+
+  try {
+    console.log('Testing database connection...');
+    const { data, error } = await client
+      .from('equipment')
+      .select('count(*)')
+      .limit(1);
+
+    if (error) {
+      console.error('Database connection test failed:', error);
+      return false;
+    }
+
+    console.log('Database connection test successful');
+    return true;
+  } catch (err) {
+    console.error('Database connection test error:', err);
+    return false;
+  }
+};
 
 export type Database = {
   public: {

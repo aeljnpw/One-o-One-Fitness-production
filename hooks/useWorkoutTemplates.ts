@@ -69,6 +69,8 @@ export function useWorkoutTemplates(equipmentName?: string) {
         throw new Error('Supabase client not initialized. Please check your environment variables.');
       }
 
+      console.log('Fetching workout templates for equipment:', equipmentName);
+
       let query = supabase
         .from('workout_templates')
         .select('*')
@@ -87,12 +89,27 @@ export function useWorkoutTemplates(equipmentName?: string) {
         throw new Error(`Database error: ${error.message}`);
       }
       
-      console.log('Fetched workout templates:', data?.length || 0);
+      console.log('Successfully fetched workout templates:', data?.length || 0);
       setTemplates(data || []);
+      
+      // If no templates found, let's check if there are any templates at all
+      if (!data || data.length === 0) {
+        const { data: allTemplates, error: allError } = await supabase
+          .from('workout_templates')
+          .select('count(*)')
+          .single();
+        
+        if (allError) {
+          console.error('Error checking total templates:', allError);
+        } else {
+          console.log('Total templates in database:', allTemplates?.count || 0);
+        }
+      }
+      
     } catch (err) {
       console.error('Error fetching workout templates:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch workout templates');
-      // Don't set empty array on error, keep existing data
+      setTemplates([]); // Clear templates on error
     } finally {
       setLoading(false);
     }
@@ -104,6 +121,8 @@ export function useWorkoutTemplates(equipmentName?: string) {
       if (!supabase) {
         throw new Error('Supabase client not initialized');
       }
+
+      console.log('Fetching template with exercises for ID:', templateId);
 
       const { data, error } = await supabase
         .from('workout_templates')
@@ -144,6 +163,7 @@ export function useWorkoutTemplates(equipmentName?: string) {
         data.exercises.sort((a, b) => a.order_index - b.order_index);
       }
       
+      console.log('Successfully fetched template with exercises:', data?.exercises?.length || 0);
       return data;
     } catch (err) {
       console.error('Error fetching template with exercises:', err);

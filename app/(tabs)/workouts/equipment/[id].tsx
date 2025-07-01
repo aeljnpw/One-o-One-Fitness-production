@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Play, Clock, Flame, Users, Star, Bookmark, Share, Target, TrendingUp, Dumbbell, ChevronRight, AlertCircle, RefreshCw } from 'lucide-react-native';
+import { ArrowLeft, Play, Clock, Flame, Users, Star, Bookmark, Share, Target, TrendingUp, Dumbbell, ChevronRight, AlertCircle, RefreshCw, Plus } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEquipment } from '@/hooks/useEquipment';
 import { useWorkoutTemplates, WorkoutTemplate } from '@/hooks/useWorkoutTemplates';
@@ -30,62 +30,12 @@ export default function EquipmentDetailScreen() {
     selectedDifficulty === 'All' || workout.difficulty === selectedDifficulty
   );
 
-  // Mock templates for demonstration when no real data exists
-  const mockTemplates: WorkoutTemplate[] = [
-    {
-      id: 'mock-1',
-      name: `${equipmentName} Full Body Strength`,
-      description: `Complete workout targeting all major muscle groups using ${equipmentName}. Perfect for building lean muscle mass and improving overall strength.`,
-      difficulty: 'intermediate',
-      estimated_duration: 45,
-      target_muscles: ['Chest', 'Back', 'Legs', 'Arms'],
-      equipment_needed: [equipmentName || 'Equipment'],
-      category: 'strength',
-      is_public: true,
-      created_by: null,
-      image_url: 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=2',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    {
-      id: 'mock-2',
-      name: `${equipmentName} Upper Body Power`,
-      description: `Intense upper body workout focusing on strength and muscle definition using ${equipmentName}.`,
-      difficulty: 'advanced',
-      estimated_duration: 35,
-      target_muscles: ['Chest', 'Shoulders', 'Arms', 'Back'],
-      equipment_needed: [equipmentName || 'Equipment'],
-      category: 'strength',
-      is_public: true,
-      created_by: null,
-      image_url: 'https://images.pexels.com/photos/1431282/pexels-photo-1431282.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=2',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    {
-      id: 'mock-3',
-      name: `${equipmentName} Beginner Basics`,
-      description: `Perfect introduction to strength training with proper form focus using ${equipmentName}.`,
-      difficulty: 'beginner',
-      estimated_duration: 25,
-      target_muscles: ['Full Body'],
-      equipment_needed: [equipmentName || 'Equipment'],
-      category: 'general',
-      is_public: true,
-      created_by: null,
-      image_url: 'https://images.pexels.com/photos/1552106/pexels-photo-1552106.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=2',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }
-  ];
-
-  // Use real templates if available, otherwise show mock data
-  const displayTemplates = templates.length > 0 ? templates : mockTemplates;
-  const filteredDisplayTemplates = displayTemplates.filter(workout => 
-    selectedDifficulty === 'All' || workout.difficulty === selectedDifficulty
-  );
-
-  const hasRealData = templates.length > 0;
+  useEffect(() => {
+    console.log('Equipment item:', equipmentItem);
+    console.log('Equipment name:', equipmentName);
+    console.log('Templates loaded:', templates.length);
+    console.log('Templates error:', templatesError);
+  }, [equipmentItem, equipmentName, templates, templatesError]);
 
   if (equipmentLoading || templatesLoading) {
     return <LoadingSpinner message="Loading equipment and workouts..." />;
@@ -269,35 +219,35 @@ export default function EquipmentDetailScreen() {
         <View style={styles.statsSection}>
           <View style={styles.statCard}>
             <TrendingUp size={24} color="#2563EB" />
-            <Text style={styles.statValue}>{displayTemplates.length}</Text>
+            <Text style={styles.statValue}>{templates.length}</Text>
             <Text style={styles.statLabel}>Workouts</Text>
           </View>
           <View style={styles.statCard}>
             <Users size={24} color="#059669" />
             <Text style={styles.statValue}>
-              {displayTemplates.reduce((sum, w) => sum + generateParticipants(w.id), 0)}
+              {templates.reduce((sum, w) => sum + generateParticipants(w.id), 0)}
             </Text>
             <Text style={styles.statLabel}>Users</Text>
           </View>
           <View style={styles.statCard}>
             <Star size={24} color="#F59E0B" />
             <Text style={styles.statValue}>
-              {(displayTemplates.reduce((sum, w) => sum + generateRating(w.id), 0) / displayTemplates.length).toFixed(1)}
+              {templates.length > 0 ? (templates.reduce((sum, w) => sum + generateRating(w.id), 0) / templates.length).toFixed(1) : '0.0'}
             </Text>
             <Text style={styles.statLabel}>Rating</Text>
           </View>
         </View>
 
         {/* Database Connection Status */}
-        {!hasRealData && (
+        {templates.length === 0 && !templatesError && (
           <View style={styles.connectionStatus}>
             <View style={styles.statusIcon}>
               <AlertCircle size={20} color="#F59E0B" />
             </View>
             <View style={styles.statusContent}>
-              <Text style={styles.statusTitle}>Using Sample Data</Text>
+              <Text style={styles.statusTitle}>No Workouts Found</Text>
               <Text style={styles.statusText}>
-                Connect to your database to see real workout templates
+                No workout templates found for {equipmentName}. Create some templates in your database or check your connection.
               </Text>
             </View>
             <TouchableOpacity 
@@ -324,51 +274,70 @@ export default function EquipmentDetailScreen() {
         )}
 
         {/* Difficulty Filter */}
-        <View style={styles.filterSection}>
-          <Text style={styles.sectionTitle}>
-            {hasRealData ? 'Available Workouts' : 'Sample Workouts'}
-          </Text>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            style={styles.difficultyFilter}
-            contentContainerStyle={styles.difficultyFilterContent}
-          >
-            {difficulties.map((difficulty) => (
-              <TouchableOpacity
-                key={difficulty}
-                style={[
-                  styles.difficultyButton,
-                  selectedDifficulty === difficulty && styles.activeDifficultyButton
-                ]}
-                onPress={() => setSelectedDifficulty(difficulty)}
-              >
-                <Text style={[
-                  styles.difficultyButtonText,
-                  selectedDifficulty === difficulty && styles.activeDifficultyButtonText
-                ]}>
-                  {difficulty === 'All' ? 'All' : getDifficultyLabel(difficulty)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+        {templates.length > 0 && (
+          <View style={styles.filterSection}>
+            <Text style={styles.sectionTitle}>Available Workouts</Text>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              style={styles.difficultyFilter}
+              contentContainerStyle={styles.difficultyFilterContent}
+            >
+              {difficulties.map((difficulty) => (
+                <TouchableOpacity
+                  key={difficulty}
+                  style={[
+                    styles.difficultyButton,
+                    selectedDifficulty === difficulty && styles.activeDifficultyButton
+                  ]}
+                  onPress={() => setSelectedDifficulty(difficulty)}
+                >
+                  <Text style={[
+                    styles.difficultyButtonText,
+                    selectedDifficulty === difficulty && styles.activeDifficultyButtonText
+                  ]}>
+                    {difficulty === 'All' ? 'All' : getDifficultyLabel(difficulty)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
 
         {/* Workouts List */}
-        <View style={styles.workoutsSection}>
-          {filteredDisplayTemplates.map((workout) => (
-            <WorkoutCard key={workout.id} workout={workout} />
-          ))}
-        </View>
+        {filteredWorkouts.length > 0 && (
+          <View style={styles.workoutsSection}>
+            {filteredWorkouts.map((workout) => (
+              <WorkoutCard key={workout.id} workout={workout} />
+            ))}
+          </View>
+        )}
 
-        {/* Empty State */}
-        {filteredDisplayTemplates.length === 0 && (
+        {/* Empty State for filtered results */}
+        {templates.length > 0 && filteredWorkouts.length === 0 && (
           <View style={styles.emptyState}>
             <Target size={48} color="#94A3B8" />
             <Text style={styles.emptyStateTitle}>No workouts found</Text>
             <Text style={styles.emptyStateText}>
               Try selecting a different difficulty level
             </Text>
+          </View>
+        )}
+
+        {/* Create Workout Suggestion */}
+        {templates.length === 0 && !templatesError && (
+          <View style={styles.createWorkoutSection}>
+            <View style={styles.createWorkoutCard}>
+              <Plus size={48} color="#2563EB" />
+              <Text style={styles.createWorkoutTitle}>Create Your First Workout</Text>
+              <Text style={styles.createWorkoutText}>
+                Start building workout templates for {equipmentName} in your database to see them here.
+              </Text>
+              <TouchableOpacity style={styles.createWorkoutButton}>
+                <Plus size={16} color="#FFFFFF" />
+                <Text style={styles.createWorkoutButtonText}>Add Workout Template</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
       </ScrollView>
@@ -727,5 +696,50 @@ const styles = StyleSheet.create({
     color: '#64748B',
     textAlign: 'center',
     lineHeight: 24,
+  },
+  createWorkoutSection: {
+    paddingHorizontal: 20,
+    paddingBottom: 32,
+  },
+  createWorkoutCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  createWorkoutTitle: {
+    fontSize: 20,
+    fontFamily: 'Inter-SemiBold',
+    color: '#1E293B',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  createWorkoutText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  createWorkoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
+  },
+  createWorkoutButtonText: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: '#FFFFFF',
   },
 });
