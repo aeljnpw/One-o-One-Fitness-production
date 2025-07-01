@@ -76,11 +76,7 @@ export default function EquipmentDetailScreen() {
   };
 
   const handleStartExercise = (exerciseId: string) => {
-    Alert.alert(
-      'Start Exercise',
-      'Exercise details and workout tracking will be implemented here.',
-      [{ text: 'OK' }]
-    );
+    router.push(`/workouts/exercise/${exerciseId}`);
   };
 
   const handleRetryExercises = () => {

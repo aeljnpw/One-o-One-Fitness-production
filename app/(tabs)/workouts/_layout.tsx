@@ -5,6 +5,7 @@ export default function WorkoutsLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="equipment/[id]" />
+      <Stack.Screen name="exercise/[id]" />
       <Stack.Screen name="workout/[id]" />
     </Stack>
   );
