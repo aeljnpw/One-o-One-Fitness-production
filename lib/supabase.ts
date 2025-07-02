@@ -573,7 +573,6 @@ export type Database = {
       profiles: {
         Row: {
           id: string;
-          user_id: string | null;
           bio: string | null;
           created_at: string;
           name: string | null;
@@ -588,7 +587,6 @@ export type Database = {
         };
         Insert: {
           id: string;
-          user_id?: string | null;
           bio?: string | null;
           created_at?: string;
           name?: string | null;
@@ -603,7 +601,6 @@ export type Database = {
         };
         Update: {
           id?: string;
-          user_id?: string | null;
           bio?: string | null;
           created_at?: string;
           name?: string | null;
