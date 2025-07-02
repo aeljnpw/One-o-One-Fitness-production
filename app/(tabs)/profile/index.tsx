@@ -1,12 +1,60 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Settings, User, Bell, Shield, CircleHelp as HelpCircle, LogOut, ChevronRight, CreditCard as Edit3, Trophy, Clock, Target } from 'lucide-react-native';
 import { getSupabase } from '@/lib/supabase';
+import { router } from 'expo-router';
+
+interface UserProfile {
+  id: string;
+  name: string | null;
+  email: string | null;
+  bio: string | null;
+  avatar_url: string | null;
+  level: string;
+  workouts_completed: number;
+  total_calories: number;
+  current_streak: number;
+  longest_streak: number;
+  created_at: string;
+}
 
 export default function ProfileScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [privateProfile, setPrivateProfile] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    try {
+      const supabase = getSupabase();
+      if (!supabase) return;
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return;
+      }
+
+      setProfile(data);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const MenuSection = ({ title, children }: { title: string; children: React.ReactNode }) => (
     <View style={styles.menuSection}>
@@ -64,6 +112,16 @@ export default function ProfileScreen() {
     }
   };
 
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading profile...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -80,7 +138,9 @@ export default function ProfileScreen() {
           <View style={styles.profileInfo}>
             <View style={styles.avatarContainer}>
               <Image 
-                source={{ uri: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2' }}
+                source={{ 
+                  uri: profile?.avatar_url || 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2' 
+                }}
                 style={styles.avatar}
               />
               <TouchableOpacity style={styles.editAvatar}>
@@ -88,13 +148,18 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             </View>
             <View style={styles.userInfo}>
-              <Text style={styles.userName}>Alex Johnson</Text>
-              <Text style={styles.userEmail}>alex.johnson@email.com</Text>
-              <Text style={styles.joinDate}>Member since January 2024</Text>
+              <Text style={styles.userName}>{profile?.name || 'User'}</Text>
+              <Text style={styles.userEmail}>{profile?.email || 'user@example.com'}</Text>
+              <Text style={styles.joinDate}>
+                Member since {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Recently'}
+              </Text>
             </View>
           </View>
           
-          <TouchableOpacity style={styles.editProfileButton}>
+          <TouchableOpacity 
+            style={styles.editProfileButton}
+            onPress={() => router.push('/profile/personal-info')}
+          >
             <Text style={styles.editProfileText}>Edit Profile</Text>
           </TouchableOpacity>
         </View>
@@ -105,24 +170,24 @@ export default function ProfileScreen() {
             <View style={styles.statIcon}>
               <Trophy size={24} color="#F59E0B" />
             </View>
-            <Text style={styles.statValue}>47</Text>
-            <Text style={styles.statLabel}>Achievements</Text>
+            <Text style={styles.statValue}>{profile?.workouts_completed || 0}</Text>
+            <Text style={styles.statLabel}>Workouts</Text>
           </View>
           
           <View style={styles.statItem}>
             <View style={styles.statIcon}>
               <Clock size={24} color="#2563EB" />
             </View>
-            <Text style={styles.statValue}>156h</Text>
-            <Text style={styles.statLabel}>Total Time</Text>
+            <Text style={styles.statValue}>{profile?.current_streak || 0}</Text>
+            <Text style={styles.statLabel}>Day Streak</Text>
           </View>
           
           <View style={styles.statItem}>
             <View style={styles.statIcon}>
               <Target size={24} color="#059669" />
             </View>
-            <Text style={styles.statValue}>89%</Text>
-            <Text style={styles.statLabel}>Goal Rate</Text>
+            <Text style={styles.statValue}>{profile?.total_calories || 0}</Text>
+            <Text style={styles.statLabel}>Calories</Text>
           </View>
         </View>
 
@@ -132,7 +197,7 @@ export default function ProfileScreen() {
             icon={<User size={20} color="#64748B" />}
             title="Personal Information"
             subtitle="Update your personal details"
-            onPress={() => {}}
+            onPress={() => router.push('/profile/personal-info')}
           />
           <MenuItem
             icon={<Bell size={20} color="#64748B" />}
@@ -161,7 +226,7 @@ export default function ProfileScreen() {
             icon={<Target size={20} color="#64748B" />}
             title="Fitness Goals"
             subtitle="Update your fitness objectives"
-            onPress={() => {}}
+            onPress={() => router.push('/profile/fitness-goals')}
           />
           <MenuItem
             icon={<Bell size={20} color="#64748B" />}
@@ -221,6 +286,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    color: '#64748B',
   },
   header: {
     flexDirection: 'row',

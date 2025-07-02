@@ -1,61 +1,102 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Save, User, Mail, Phone, Calendar, MapPin, Ruler, Weight } from 'lucide-react-native';
 import { router } from 'expo-router';
+import { getSupabase } from '@/lib/supabase';
 
 interface PersonalInfo {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  dateOfBirth: string;
-  gender: string;
-  height: string;
-  weight: string;
-  address: string;
-  city: string;
-  country: string;
-  emergencyContact: string;
-  emergencyPhone: string;
+  id: string;
+  name: string | null;
+  email: string | null;
+  bio: string | null;
+  level: string;
+  created_at: string;
+  updated_at: string;
 }
 
-const genderOptions = ['Male', 'Female', 'Other', 'Prefer not to say'];
-
 export default function PersonalInfoScreen() {
-  const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({
-    firstName: 'Alex',
-    lastName: 'Johnson',
-    email: 'alex.johnson@email.com',
-    phone: '+1 (555) 123-4567',
-    dateOfBirth: '1990-05-15',
-    gender: 'Male',
-    height: '175',
-    weight: '70',
-    address: '123 Fitness Street',
-    city: 'San Francisco',
-    country: 'United States',
-    emergencyContact: 'Sarah Johnson',
-    emergencyPhone: '+1 (555) 987-6543',
-  });
-
+  const [personalInfo, setPersonalInfo] = useState<PersonalInfo | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const handleSave = async () => {
-    setIsSaving(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    setIsSaving(false);
-    setIsEditing(false);
-    
-    Alert.alert('Success', 'Personal information updated successfully!');
+  // Form fields
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [bio, setBio] = useState('');
+  const [level, setLevel] = useState('Beginner');
+
+  const levelOptions = ['Beginner', 'Intermediate', 'Advanced'];
+
+  useEffect(() => {
+    fetchPersonalInfo();
+  }, []);
+
+  const fetchPersonalInfo = async () => {
+    try {
+      const supabase = getSupabase();
+      if (!supabase) return;
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return;
+      }
+
+      setPersonalInfo(data);
+      setName(data.name || '');
+      setEmail(data.email || '');
+      setBio(data.bio || '');
+      setLevel(data.level || 'Beginner');
+    } catch (error) {
+      console.error('Error fetching personal info:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const updateField = (field: keyof PersonalInfo, value: string) => {
-    setPersonalInfo(prev => ({ ...prev, [field]: value }));
+  const handleSave = async () => {
+    if (!personalInfo) return;
+
+    setIsSaving(true);
+    
+    try {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error('Supabase client not initialized');
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          name,
+          email,
+          bio,
+          level,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', personalInfo.id);
+
+      if (error) throw error;
+
+      setIsEditing(false);
+      Alert.alert('Success', 'Personal information updated successfully!');
+      
+      // Refresh the data
+      await fetchPersonalInfo();
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      Alert.alert('Error', 'Failed to update personal information');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const InputField = ({ 
@@ -140,6 +181,16 @@ export default function PersonalInfoScreen() {
     </View>
   );
 
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading personal information...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -174,147 +225,38 @@ export default function PersonalInfoScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Basic Information</Text>
           <View style={styles.sectionContent}>
-            <View style={styles.row}>
-              <View style={styles.halfWidth}>
-                <InputField
-                  label="First Name"
-                  value={personalInfo.firstName}
-                  onChangeText={(text) => updateField('firstName', text)}
-                  placeholder="Enter first name"
-                  icon={<User size={20} color="#64748B" />}
-                />
-              </View>
-              <View style={styles.halfWidth}>
-                <InputField
-                  label="Last Name"
-                  value={personalInfo.lastName}
-                  onChangeText={(text) => updateField('lastName', text)}
-                  placeholder="Enter last name"
-                  icon={<User size={20} color="#64748B" />}
-                />
-              </View>
-            </View>
+            <InputField
+              label="Full Name"
+              value={name}
+              onChangeText={setName}
+              placeholder="Enter your full name"
+              icon={<User size={20} color="#64748B" />}
+            />
 
             <InputField
               label="Email Address"
-              value={personalInfo.email}
-              onChangeText={(text) => updateField('email', text)}
+              value={email}
+              onChangeText={setEmail}
               placeholder="Enter email address"
               icon={<Mail size={20} color="#64748B" />}
               keyboardType="email-address"
             />
 
             <InputField
-              label="Phone Number"
-              value={personalInfo.phone}
-              onChangeText={(text) => updateField('phone', text)}
-              placeholder="Enter phone number"
-              icon={<Phone size={20} color="#64748B" />}
-              keyboardType="phone-pad"
-            />
-
-            <InputField
-              label="Date of Birth"
-              value={personalInfo.dateOfBirth}
-              onChangeText={(text) => updateField('dateOfBirth', text)}
-              placeholder="YYYY-MM-DD"
-              icon={<Calendar size={20} color="#64748B" />}
-            />
-
-            <SelectField
-              label="Gender"
-              value={personalInfo.gender}
-              options={genderOptions}
-              onSelect={(value) => updateField('gender', value)}
+              label="Bio"
+              value={bio}
+              onChangeText={setBio}
+              placeholder="Tell us about yourself..."
               icon={<User size={20} color="#64748B" />}
-            />
-          </View>
-        </View>
-
-        {/* Physical Information */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Physical Information</Text>
-          <View style={styles.sectionContent}>
-            <View style={styles.row}>
-              <View style={styles.halfWidth}>
-                <InputField
-                  label="Height (cm)"
-                  value={personalInfo.height}
-                  onChangeText={(text) => updateField('height', text)}
-                  placeholder="Enter height"
-                  icon={<Ruler size={20} color="#64748B" />}
-                  keyboardType="numeric"
-                />
-              </View>
-              <View style={styles.halfWidth}>
-                <InputField
-                  label="Weight (kg)"
-                  value={personalInfo.weight}
-                  onChangeText={(text) => updateField('weight', text)}
-                  placeholder="Enter weight"
-                  icon={<Weight size={20} color="#64748B" />}
-                  keyboardType="numeric"
-                />
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Address Information */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Address Information</Text>
-          <View style={styles.sectionContent}>
-            <InputField
-              label="Street Address"
-              value={personalInfo.address}
-              onChangeText={(text) => updateField('address', text)}
-              placeholder="Enter street address"
-              icon={<MapPin size={20} color="#64748B" />}
               multiline
             />
 
-            <View style={styles.row}>
-              <View style={styles.halfWidth}>
-                <InputField
-                  label="City"
-                  value={personalInfo.city}
-                  onChangeText={(text) => updateField('city', text)}
-                  placeholder="Enter city"
-                  icon={<MapPin size={20} color="#64748B" />}
-                />
-              </View>
-              <View style={styles.halfWidth}>
-                <InputField
-                  label="Country"
-                  value={personalInfo.country}
-                  onChangeText={(text) => updateField('country', text)}
-                  placeholder="Enter country"
-                  icon={<MapPin size={20} color="#64748B" />}
-                />
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Emergency Contact */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Emergency Contact</Text>
-          <View style={styles.sectionContent}>
-            <InputField
-              label="Contact Name"
-              value={personalInfo.emergencyContact}
-              onChangeText={(text) => updateField('emergencyContact', text)}
-              placeholder="Enter emergency contact name"
-              icon={<User size={20} color="#64748B" />}
-            />
-
-            <InputField
-              label="Contact Phone"
-              value={personalInfo.emergencyPhone}
-              onChangeText={(text) => updateField('emergencyPhone', text)}
-              placeholder="Enter emergency contact phone"
-              icon={<Phone size={20} color="#64748B" />}
-              keyboardType="phone-pad"
+            <SelectField
+              label="Fitness Level"
+              value={level}
+              options={levelOptions}
+              onSelect={setLevel}
+              icon={<Target size={20} color="#64748B" />}
             />
           </View>
         </View>
@@ -323,7 +265,16 @@ export default function PersonalInfoScreen() {
         {isEditing && (
           <TouchableOpacity 
             style={styles.cancelButton}
-            onPress={() => setIsEditing(false)}
+            onPress={() => {
+              setIsEditing(false);
+              // Reset form fields to original values
+              if (personalInfo) {
+                setName(personalInfo.name || '');
+                setEmail(personalInfo.email || '');
+                setBio(personalInfo.bio || '');
+                setLevel(personalInfo.level || 'Beginner');
+              }
+            }}
           >
             <Text style={styles.cancelButtonText}>Cancel Changes</Text>
           </TouchableOpacity>
@@ -337,6 +288,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    color: '#64748B',
   },
   header: {
     flexDirection: 'row',
@@ -408,13 +369,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  halfWidth: {
-    flex: 1,
   },
   inputGroup: {
     marginBottom: 20,
