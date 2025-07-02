@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Settings, User, Bell, Shield, CircleHelp as HelpCircle, LogOut, ChevronRight, CreditCard as Edit3, Trophy, Clock, Target } from 'lucide-react-native';
+import { getSupabase } from '@/lib/supabase';
 
 export default function ProfileScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -47,6 +48,21 @@ export default function ProfileScreen() {
       </View>
     </TouchableOpacity>
   );
+
+  const handleSignOut = async () => {
+    try {
+      const supabase = getSupabase();
+      if (!supabase) {
+        throw new Error('Supabase client not initialized');
+      }
+
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    } catch (error) {
+      console.error('Sign out error:', error);
+      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to sign out');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -186,7 +202,7 @@ export default function ProfileScreen() {
 
         {/* Logout */}
         <View style={styles.logoutSection}>
-          <TouchableOpacity style={styles.logoutButton}>
+          <TouchableOpacity style={styles.logoutButton} onPress={handleSignOut}>
             <LogOut size={20} color="#EF4444" />
             <Text style={styles.logoutText}>Sign Out</Text>
           </TouchableOpacity>
