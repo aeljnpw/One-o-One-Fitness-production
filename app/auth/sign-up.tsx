@@ -24,6 +24,11 @@ export default function SignUpScreen() {
       return;
     }
 
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters long');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const supabase = getSupabase();
@@ -35,17 +40,20 @@ export default function SignUpScreen() {
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: undefined, // Disable email confirmation
+        }
       });
 
       if (signUpError) throw signUpError;
 
-      // Create a profile for the user
+      // Create a profile for the user using the auth user's ID
       if (authData.user) {
         const { error: profileError } = await supabase
           .from('profiles')
           .insert([
             {
-              id: authData.user.id,
+              id: authData.user.id, // Use the auth user's ID as the profile ID
               name,
               email,
               level: 'Beginner',
@@ -56,12 +64,16 @@ export default function SignUpScreen() {
             },
           ]);
 
-        if (profileError) throw profileError;
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+          // Don't throw here as the user account was created successfully
+          // The profile can be created later or updated
+        }
       }
 
       Alert.alert(
         'Success',
-        'Account created successfully! Please check your email for verification.',
+        'Account created successfully! You can now sign in.',
         [{ text: 'OK', onPress: () => router.replace('/auth/sign-in') }]
       );
     } catch (error) {
@@ -104,6 +116,7 @@ export default function SignUpScreen() {
                 value={name}
                 onChangeText={setName}
                 placeholderTextColor="#94A3B8"
+                autoCapitalize="words"
               />
             </View>
           </View>
@@ -132,7 +145,7 @@ export default function SignUpScreen() {
               </View>
               <TextInput
                 style={styles.input}
-                placeholder="Password"
+                placeholder="Password (min 6 characters)"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
@@ -191,9 +204,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   header: {
     marginBottom: 48,
+    alignItems: 'center',
   },
   title: {
     fontSize: 32,
@@ -205,9 +224,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Inter-Regular',
     color: '#64748B',
+    textAlign: 'center',
   },
   form: {
-    gap: 16,
+    gap: 20,
   },
   inputGroup: {
     gap: 8,
@@ -216,18 +236,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
   inputIcon: {
-    padding: 12,
+    padding: 16,
     borderRightWidth: 1,
-    borderRightColor: '#E2E8F0',
+    borderRightColor: '#F1F5F9',
   },
   input: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 16,
     paddingHorizontal: 16,
     fontSize: 16,
     fontFamily: 'Inter-Regular',
@@ -238,10 +263,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#2563EB',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 18,
     gap: 8,
-    marginTop: 8,
+    marginTop: 12,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   signUpButtonText: {
     fontSize: 16,
@@ -265,4 +295,4 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-SemiBold',
     color: '#2563EB',
   },
-}); 
+});

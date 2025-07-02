@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { Mail, Lock, LogIn } from 'lucide-react-native';
+import { Mail, Lock, LogIn, Dumbbell } from 'lucide-react-native';
 import { getSupabase } from '@/lib/supabase';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 
@@ -24,12 +24,43 @@ export default function SignInScreen() {
         throw new Error('Supabase client not initialized');
       }
 
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
+
+      // Check if user has a profile, create one if not
+      if (data.user) {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
+
+        if (profileError && profileError.code === 'PGRST116') {
+          // Profile doesn't exist, create one
+          const { error: createProfileError } = await supabase
+            .from('profiles')
+            .insert([
+              {
+                id: data.user.id,
+                email: data.user.email || email,
+                name: data.user.user_metadata?.name || 'User',
+                level: 'Beginner',
+                workouts_completed: 0,
+                total_calories: 0,
+                current_streak: 0,
+                longest_streak: 0,
+              },
+            ]);
+
+          if (createProfileError) {
+            console.error('Error creating profile:', createProfileError);
+          }
+        }
+      }
 
       router.replace('/(tabs)');
     } catch (error) {
@@ -51,6 +82,15 @@ export default function SignInScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
+        {/* Logo/Brand Section */}
+        <View style={styles.brandSection}>
+          <View style={styles.logoContainer}>
+            <Dumbbell size={48} color="#2563EB" />
+          </View>
+          <Text style={styles.brandTitle}>FitTracker</Text>
+          <Text style={styles.brandSubtitle}>Your fitness journey starts here</Text>
+        </View>
+
         <View style={styles.header}>
           <Text style={styles.title}>Welcome Back!</Text>
           <Text style={styles.subtitle}>Sign in to continue your fitness journey</Text>
@@ -124,11 +164,42 @@ const styles = StyleSheet.create({
     padding: 24,
     justifyContent: 'center',
   },
-  header: {
+  brandSection: {
+    alignItems: 'center',
     marginBottom: 48,
   },
+  logoContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  brandTitle: {
+    fontSize: 28,
+    fontFamily: 'Inter-Bold',
+    color: '#1E293B',
+    marginBottom: 4,
+  },
+  brandSubtitle: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#64748B',
+    textAlign: 'center',
+  },
+  header: {
+    marginBottom: 32,
+    alignItems: 'center',
+  },
   title: {
-    fontSize: 32,
+    fontSize: 24,
     fontFamily: 'Inter-Bold',
     color: '#1E293B',
     marginBottom: 8,
@@ -137,9 +208,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Inter-Regular',
     color: '#64748B',
+    textAlign: 'center',
   },
   form: {
-    gap: 16,
+    gap: 20,
   },
   inputGroup: {
     gap: 8,
@@ -148,18 +220,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
   inputIcon: {
-    padding: 12,
+    padding: 16,
     borderRightWidth: 1,
-    borderRightColor: '#E2E8F0',
+    borderRightColor: '#F1F5F9',
   },
   input: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 16,
     paddingHorizontal: 16,
     fontSize: 16,
     fontFamily: 'Inter-Regular',
@@ -167,6 +244,7 @@ const styles = StyleSheet.create({
   },
   forgotPassword: {
     alignSelf: 'flex-end',
+    marginTop: -8,
   },
   forgotPasswordText: {
     fontSize: 14,
@@ -178,10 +256,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#2563EB',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 18,
     gap: 8,
-    marginTop: 8,
+    marginTop: 12,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   signInButtonText: {
     fontSize: 16,
@@ -205,4 +288,4 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-SemiBold',
     color: '#2563EB',
   },
-}); 
+});
