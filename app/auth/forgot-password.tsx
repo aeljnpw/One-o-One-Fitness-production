@@ -2,18 +2,17 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { Mail, Lock, LogIn } from 'lucide-react-native';
+import { Mail, ArrowLeft } from 'lucide-react-native';
 import { getSupabase } from '@/lib/supabase';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 
-export default function SignInScreen() {
+export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSignIn = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+  const handleResetPassword = async () => {
+    if (!email) {
+      Alert.alert('Error', 'Please enter your email address');
       return;
     }
 
@@ -24,36 +23,48 @@ export default function SignInScreen() {
         throw new Error('Supabase client not initialized');
       }
 
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: 'one-o-one-fitness://reset-password',
       });
 
       if (error) throw error;
 
-      router.replace('/(tabs)');
+      Alert.alert(
+        'Success',
+        'If an account exists with this email, you will receive password reset instructions.',
+        [{ text: 'OK', onPress: () => router.replace('/auth/sign-in') }]
+      );
     } catch (error) {
-      console.error('Sign in error:', error);
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to sign in');
+      console.error('Password reset error:', error);
+      Alert.alert(
+        'Error',
+        'Failed to send password reset email. Please try again later.'
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSignUp = () => {
-    router.push('/auth/sign-up');
+  const handleBack = () => {
+    router.back();
   };
 
   if (isLoading) {
-    return <LoadingSpinner message="Signing in..." />;
+    return <LoadingSpinner message="Sending reset instructions..." />;
   }
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
+        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+          <ArrowLeft size={24} color="#1E293B" />
+        </TouchableOpacity>
+
         <View style={styles.header}>
-          <Text style={styles.title}>Welcome Back!</Text>
-          <Text style={styles.subtitle}>Sign in to continue your fitness journey</Text>
+          <Text style={styles.title}>Reset Password</Text>
+          <Text style={styles.subtitle}>
+            Enter your email address and we'll send you instructions to reset your password
+          </Text>
         </View>
 
         <View style={styles.form}>
@@ -74,39 +85,18 @@ export default function SignInScreen() {
             </View>
           </View>
 
-          <View style={styles.inputGroup}>
-            <View style={styles.inputContainer}>
-              <View style={styles.inputIcon}>
-                <Lock size={20} color="#64748B" />
-              </View>
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                placeholderTextColor="#94A3B8"
-              />
-            </View>
-          </View>
-
           <TouchableOpacity 
-            style={styles.forgotPassword} 
-            onPress={() => router.push('/auth/forgot-password')}
+            style={styles.resetButton} 
+            onPress={handleResetPassword}
           >
-            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.signInButton} onPress={handleSignIn}>
-            <LogIn size={20} color="#FFFFFF" />
-            <Text style={styles.signInButtonText}>Sign In</Text>
+            <Text style={styles.resetButtonText}>Send Reset Instructions</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account?</Text>
-          <TouchableOpacity onPress={handleSignUp}>
-            <Text style={styles.signUpText}>Sign Up</Text>
+          <Text style={styles.footerText}>Remember your password?</Text>
+          <TouchableOpacity onPress={handleBack}>
+            <Text style={styles.signInText}>Sign In</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -122,7 +112,15 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 24,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
   },
   header: {
     marginBottom: 48,
@@ -137,6 +135,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Inter-Regular',
     color: '#64748B',
+    lineHeight: 24,
   },
   form: {
     gap: 16,
@@ -165,25 +164,14 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     color: '#1E293B',
   },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-  },
-  forgotPasswordText: {
-    fontSize: 14,
-    fontFamily: 'Inter-Medium',
-    color: '#2563EB',
-  },
-  signInButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+  resetButton: {
     backgroundColor: '#2563EB',
     borderRadius: 12,
     padding: 16,
-    gap: 8,
+    alignItems: 'center',
     marginTop: 8,
   },
-  signInButtonText: {
+  resetButtonText: {
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
     color: '#FFFFFF',
@@ -200,7 +188,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     color: '#64748B',
   },
-  signUpText: {
+  signInText: {
     fontSize: 14,
     fontFamily: 'Inter-SemiBold',
     color: '#2563EB',

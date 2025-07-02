@@ -5,6 +5,7 @@ export default {
   orientation: 'portrait',
   icon: './assets/icon.png',
   userInterfaceStyle: 'light',
+  scheme: 'one-o-one-fitness',
   splash: {
     image: './assets/splash.png',
     resizeMode: 'contain',
@@ -14,17 +15,22 @@ export default {
     '**/*'
   ],
   ios: {
-    supportsTablet: true
+    supportsTablet: true,
+    bundleIdentifier: 'com.oneoonefitness.app'
   },
   android: {
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
       backgroundColor: '#ffffff'
-    }
+    },
+    package: 'com.oneoonefitness.app'
   },
   web: {
     favicon: './assets/favicon.png'
   },
+  plugins: [
+    'expo-router'
+  ],
   extra: {
     SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
     SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
