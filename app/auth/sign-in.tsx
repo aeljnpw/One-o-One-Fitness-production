@@ -31,41 +31,26 @@ export default function SignInScreen() {
 
       if (error) throw error;
 
-      // Check if user has a profile, create one if not
       if (data.user) {
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', data.user.id)
-          .single();
-
-        if (profileError && profileError.code === 'PGRST116') {
-          // Profile doesn't exist, create one
-          const { error: createProfileError } = await supabase
-            .from('profiles')
-            .insert([
-              {
-                id: data.user.id,
-                email: data.user.email || email,
-                name: data.user.user_metadata?.name || 'User',
-                level: 'Beginner',
-                workouts_completed: 0,
-                total_calories: 0,
-                current_streak: 0,
-                longest_streak: 0,
-              },
-            ]);
-
-          if (createProfileError) {
-            console.error('Error creating profile:', createProfileError);
-          }
-        }
+        // Navigate to main app
+        router.replace('/(tabs)');
       }
-
-      router.replace('/(tabs)');
     } catch (error) {
       console.error('Sign in error:', error);
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to sign in');
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to sign in';
+      if (error instanceof Error) {
+        if (error.message.includes('Invalid login credentials')) {
+          errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+        } else if (error.message.includes('Email not confirmed')) {
+          errorMessage = 'Please check your email and confirm your account before signing in.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      Alert.alert('Sign In Error', errorMessage);
     } finally {
       setIsLoading(false);
     }

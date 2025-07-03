@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { Mail, Lock, User, ArrowLeft, UserPlus } from 'lucide-react-native';
+import { Mail, Lock, User, ArrowLeft, UserPlus, Dumbbell } from 'lucide-react-native';
 import { getSupabase } from '@/lib/supabase';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 
@@ -36,46 +36,28 @@ export default function SignUpScreen() {
         throw new Error('Supabase client not initialized');
       }
 
-      // Sign up the user
+      // Sign up the user with metadata
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: undefined, // Disable email confirmation
+          data: {
+            name: name,
+          }
         }
       });
 
       if (signUpError) throw signUpError;
 
-      // Create a profile for the user using the auth user's ID
       if (authData.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert([
-            {
-              id: authData.user.id, // Use the auth user's ID as the profile ID
-              name,
-              email,
-              level: 'Beginner',
-              workouts_completed: 0,
-              total_calories: 0,
-              current_streak: 0,
-              longest_streak: 0,
-            },
-          ]);
-
-        if (profileError) {
-          console.error('Profile creation error:', profileError);
-          // Don't throw here as the user account was created successfully
-          // The profile can be created later or updated
-        }
+        Alert.alert(
+          'Success',
+          'Account created successfully! You can now sign in.',
+          [{ text: 'OK', onPress: () => router.replace('/auth/sign-in') }]
+        );
+      } else {
+        throw new Error('Failed to create user account');
       }
-
-      Alert.alert(
-        'Success',
-        'Account created successfully! You can now sign in.',
-        [{ text: 'OK', onPress: () => router.replace('/auth/sign-in') }]
-      );
     } catch (error) {
       console.error('Sign up error:', error);
       Alert.alert('Error', error instanceof Error ? error.message : 'Failed to sign up');
@@ -98,6 +80,15 @@ export default function SignUpScreen() {
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>
           <ArrowLeft size={24} color="#1E293B" />
         </TouchableOpacity>
+
+        {/* Logo/Brand Section */}
+        <View style={styles.brandSection}>
+          <View style={styles.logoContainer}>
+            <Dumbbell size={48} color="#2563EB" />
+          </View>
+          <Text style={styles.brandTitle}>Join FitTracker</Text>
+          <Text style={styles.brandSubtitle}>Start your fitness journey today</Text>
+        </View>
 
         <View style={styles.header}>
           <Text style={styles.title}>Create Account</Text>
@@ -210,12 +201,42 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  brandSection: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  logoContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  brandTitle: {
+    fontSize: 28,
+    fontFamily: 'Inter-Bold',
+    color: '#1E293B',
+    marginBottom: 4,
+  },
+  brandSubtitle: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#64748B',
+    textAlign: 'center',
+  },
   header: {
-    marginBottom: 48,
+    marginBottom: 32,
     alignItems: 'center',
   },
   title: {
-    fontSize: 32,
+    fontSize: 24,
     fontFamily: 'Inter-Bold',
     color: '#1E293B',
     marginBottom: 8,
