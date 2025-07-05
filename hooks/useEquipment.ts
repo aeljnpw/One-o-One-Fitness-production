@@ -20,10 +20,6 @@ export function useEquipment() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchEquipment();
-  }, []);
-
   const fetchEquipment = async () => {
     try {
       setLoading(true);
@@ -33,39 +29,64 @@ export function useEquipment() {
       
       const supabase = getSupabase();
       if (!supabase) {
-        console.error('❌ Supabase client not initialized');
         throw new Error('Supabase client not initialized');
       }
 
       console.log('✅ Supabase client initialized, making query...');
 
+      // First, test if we can access the table at all
+      const { count, error: countError } = await supabase
+        .from('equipment')
+        .select('*', { count: 'exact', head: true });
+
+      if (countError) {
+        console.error('❌ Error checking equipment table:', countError);
+        throw new Error(`Failed to access equipment table: ${countError.message}`);
+      }
+
+      console.log('📊 Total equipment count:', count);
+
+      // Now fetch the actual data - without exercises for now
       const { data, error } = await supabase
         .from('equipment')
-        .select(`
-          *,
-          exercises (
-            id,
-            name
-          )
-        `)
-        .order('name')
+        .select('*')
         .returns<Equipment[]>();
 
-      console.log('📊 Query result:', { data: data?.length || 0, error });
+      if (error) {
+        console.error('❌ Error fetching equipment:', error);
+        throw error;
+      }
 
-      if (error) throw error;
-      
-      console.log('✅ Equipment fetched successfully:', data?.length || 0, 'items');
-      setEquipment(data || []);
+      if (!data) {
+        console.warn('⚠️ No equipment data returned');
+        setEquipment([]);
+        return;
+      }
+
+      // Add empty exercises array to match the interface
+      const equipmentWithEmptyExercises = data.map(item => ({
+        ...item,
+        exercises: []
+      }));
+
+      console.log('✅ Equipment fetched successfully:', {
+        count: equipmentWithEmptyExercises.length,
+        firstItem: equipmentWithEmptyExercises[0],
+        categories: [...new Set(equipmentWithEmptyExercises.map(e => e.category))],
+      });
+
+      setEquipment(equipmentWithEmptyExercises);
     } catch (err) {
-      console.error('Error fetching equipment:', err);
+      console.error('❌ Error in fetchEquipment:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch equipment');
-      console.log('❌ Equipment fetch failed:', err);
     } finally {
       setLoading(false);
-      console.log('🏁 Equipment fetch completed');
     }
   };
+
+  useEffect(() => {
+    fetchEquipment();
+  }, []);
 
   const getEquipmentById = async (id: string): Promise<Equipment | null> => {
     try {
@@ -76,33 +97,20 @@ export function useEquipment() {
 
       const { data, error } = await supabase
         .from('equipment')
-        .select(`
-          *,
-          exercises (
-            id,
-            name,
-            muscle_group,
-            difficulty,
-            type,
-            thumbnail_url,
-            video_url,
-            proper_form,
-            common_mistakes,
-            tips,
-            instructions,
-            primary_muscles,
-            secondary_muscles
-          ),
-        `)
+        .select('*')
         .eq('id', id)
         .single()
         .returns<Equipment>();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error fetching equipment by ID:', error);
+        throw error;
+      }
       
-      return data;
+      // Add empty exercises array to match the interface
+      return data ? { ...data, exercises: [] } : null;
     } catch (err) {
-      console.error('Error fetching equipment by ID:', err);
+      console.error('❌ Error in getEquipmentById:', err);
       return null;
     }
   };

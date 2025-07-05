@@ -5,6 +5,8 @@ import { Dumbbell, Clock, Flame, Filter, Search, ChevronRight, CircleAlert as Al
 import { useEquipment } from '@/hooks/useEquipment';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ErrorMessage } from '@/components/ErrorMessage';
+import { DatabaseStatus } from '@/components/DatabaseStatus';
+import { RLSTest } from '@/components/RLSTest';
 import { router } from 'expo-router';
 
 interface EquipmentWithWorkouts {
@@ -51,12 +53,20 @@ export default function WorkoutsScreen() {
   console.log('Filtered equipment count:', filteredEquipment.length);
 
   if (loading) {
-    return <LoadingSpinner message="Loading equipment..." />;
+    return (
+      <SafeAreaView style={styles.container}>
+        <DatabaseStatus />
+        <RLSTest />
+        <LoadingSpinner message="Loading equipment..." />
+      </SafeAreaView>
+    );
   }
 
   if (error) {
     return (
       <SafeAreaView style={styles.container}>
+        <DatabaseStatus />
+        <RLSTest />
         <View style={styles.header}>
           <Text style={styles.title}>Equipment & Workouts</Text>
         </View>
@@ -169,6 +179,10 @@ export default function WorkoutsScreen() {
           <Filter size={20} color="#64748B" />
         </TouchableOpacity>
       </View>
+
+      {/* Database Status */}
+      <DatabaseStatus />
+      <RLSTest />
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>

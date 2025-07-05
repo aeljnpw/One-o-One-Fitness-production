@@ -1,50 +1,14 @@
 import { useState, useEffect } from 'react';
 import { getSupabase } from '@/lib/supabase';
+import { Database } from '@/lib/types';
 
-export interface WorkoutTemplate {
-  id: string;
-  name: string;
-  description: string | null;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  estimated_duration: number;
-  target_muscles: string[];
-  equipment_needed: string[];
-  category: string;
-  is_public: boolean;
-  created_by: string | null;
-  image_url: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface WorkoutTemplateExercise {
-  id: string;
-  template_id: string;
-  exercise_id: string;
-  order_index: number;
-  sets: number;
-  reps: number | null;
-  duration: number | null;
-  rest_time: number;
-  notes: string | null;
-  exercise: {
-    id: string;
-    name: string;
-    muscle_group: string;
-    difficulty: string;
-    type: string | null;
-    equipment: string | null;
-    thumbnail_url: string | null;
-    video_url: string | null;
-    proper_form: string | null;
-    common_mistakes: string | null;
-    tips: string | null;
-    instructions: string[] | null;
-    primary_muscles: string[] | null;
-    secondary_muscles: string[] | null;
-    equipment_id: string | null;
-  };
-}
+// Define types based on Database type
+type Tables = Database['public']['Tables'];
+type WorkoutTemplate = Tables['workout_templates']['Row'];
+type Exercise = Tables['exercises']['Row'];
+type WorkoutTemplateExercise = Tables['workout_template_exercises']['Row'] & {
+  exercise: Exercise;
+};
 
 export interface WorkoutTemplateWithExercises extends WorkoutTemplate {
   exercises: WorkoutTemplateExercise[];
@@ -82,7 +46,7 @@ export function useWorkoutTemplates(equipmentName?: string) {
         query = query.contains('equipment_needed', [equipmentName]);
       }
 
-      const { data, error } = await query.returns<WorkoutTemplate[]>();
+      const { data, error } = await query;
 
       if (error) {
         console.error('Supabase error:', error);
@@ -149,8 +113,7 @@ export function useWorkoutTemplates(equipmentName?: string) {
           )
         `)
         .eq('id', templateId)
-        .single()
-        .returns<WorkoutTemplateWithExercises>();
+        .single();
 
       if (error) {
         console.error('Error fetching template with exercises:', error);
@@ -159,11 +122,11 @@ export function useWorkoutTemplates(equipmentName?: string) {
       
       // Sort exercises by order_index
       if (data?.exercises) {
-        data.exercises.sort((a, b) => a.order_index - b.order_index);
+        data.exercises.sort((a: WorkoutTemplateExercise, b: WorkoutTemplateExercise) => a.order_index - b.order_index);
       }
       
       console.log('Successfully fetched template with exercises:', data?.exercises?.length || 0);
-      return data;
+      return data as WorkoutTemplateWithExercises;
     } catch (err) {
       console.error('Error fetching template with exercises:', err);
       return null;
@@ -181,8 +144,7 @@ export function useWorkoutTemplates(equipmentName?: string) {
         .from('workout_templates')
         .insert([template])
         .select()
-        .single()
-        .returns<WorkoutTemplate>();
+        .single();
 
       if (error) throw error;
 
@@ -232,12 +194,11 @@ export function useWorkoutTemplates(equipmentName?: string) {
             equipment_id
           )
         `)
-        .single()
-        .returns<WorkoutTemplateExercise>();
+        .single();
 
       if (error) throw error;
       
-      return data;
+      return data as WorkoutTemplateExercise;
     } catch (err) {
       console.error('Error adding exercise to template:', err);
       return null;

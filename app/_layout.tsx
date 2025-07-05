@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { Stack, router } from 'expo-router';
+import React, { useEffect } from 'react';
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { useFonts } from 'expo-font';
 import {
   Inter_400Regular,
@@ -10,14 +9,11 @@ import {
   Inter_700Bold
 } from '@expo-google-fonts/inter';
 import { SplashScreen } from 'expo-router';
-import { getSupabase } from '@/lib/supabase';
+import { View, Text, Platform } from 'react-native';
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  useFrameworkReady();
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-
   const [fontsLoaded, fontError] = useFonts({
     'Inter-Regular': Inter_400Regular,
     'Inter-Medium': Inter_500Medium,
@@ -26,38 +22,34 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    const supabase = getSupabase();
-    if (!supabase) return;
-
-    // Check initial auth state
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsAuthenticated(!!session);
-      if (!session) {
-        router.replace('/auth/sign-in');
+    const hideSplash = async () => {
+      try {
+        console.log('Attempting to hide splash screen...');
+        await SplashScreen.hideAsync();
+        console.log('Splash screen hidden successfully');
+      } catch (error) {
+        console.error('Error hiding splash screen:', error);
       }
-    });
-
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setIsAuthenticated(!!session);
-      if (!session) {
-        router.replace('/auth/sign-in');
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
     };
-  }, []);
 
-  useEffect(() => {
     if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
+      console.log('Fonts loaded:', fontsLoaded, 'Font error:', !!fontError);
+      hideSplash();
     }
   }, [fontsLoaded, fontError]);
 
+  // Return loading placeholder
   if (!fontsLoaded && !fontError) {
     return null;
+  }
+
+  // Return error screen if font loading failed
+  if (fontError) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <Text>Error loading fonts. Platform: {Platform.OS}</Text>
+      </View>
+    );
   }
 
   return (
