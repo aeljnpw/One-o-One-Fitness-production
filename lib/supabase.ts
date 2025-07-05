@@ -125,47 +125,6 @@ export type Database = {
           created_at: string;
           equipment_id: string | null;
         };
-        Insert: {
-          id?: string;
-          name: string;
-          muscle_group: string;
-          difficulty: string;
-          type?: string | null;
-          equipment?: string | null;
-          thumbnail_url?: string | null;
-          video_url?: string | null;
-          proper_form?: string | null;
-          common_mistakes?: string | null;
-          tips?: string | null;
-          title?: string | null;
-          instructions?: string[] | null;
-          duration?: string | null;
-          primary_muscles?: string[] | null;
-          secondary_muscles?: string[] | null;
-          created_at?: string;
-          equipment_id?: string | null;
-        };
-        Update: {
-          id?: string;
-          name?: string;
-          muscle_group?: string;
-          difficulty?: string;
-          type?: string | null;
-          equipment?: string | null;
-          thumbnail_url?: string | null;
-          video_url?: string | null;
-          proper_form?: string | null;
-          common_mistakes?: string | null;
-          tips?: string | null;
-          title?: string | null;
-          instructions?: string[] | null;
-          duration?: string | null;
-          primary_muscles?: string[] | null;
-          secondary_muscles?: string[] | null;
-          created_at?: string;
-          equipment_id?: string | null;
-        };
-      };
       workout_templates: {
         Row: {
           id: string;

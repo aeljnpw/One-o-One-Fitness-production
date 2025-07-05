@@ -13,12 +13,6 @@ export interface Equipment {
     id: string;
     name: string;
   }[];
-  maintenance?: {
-    id: string;
-    maintenance_type: 'cleaning' | 'repair' | 'inspection' | 'replacement';
-    maintenance_date: string;
-    next_maintenance_date: string | null;
-  }[];
 }
 
 export function useEquipment() {
@@ -48,12 +42,6 @@ export function useEquipment() {
             id,
             name
           ),
-          equipment_maintenance (
-            id,
-            maintenance_type,
-            maintenance_date,
-            next_maintenance_date
-          )
         `)
         .order('name')
         .returns<Equipment[]>();
@@ -95,16 +83,6 @@ export function useEquipment() {
             primary_muscles,
             secondary_muscles
           ),
-          equipment_maintenance (
-            id,
-            maintenance_type,
-            maintenance_date,
-            description,
-            cost,
-            performed_by,
-            next_maintenance_date,
-            notes
-          )
         `)
         .eq('id', id)
         .single()
