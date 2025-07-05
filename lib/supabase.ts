@@ -54,17 +54,21 @@ export const testConnection = async () => {
 
   try {
     console.log('Testing database connection...');
+    console.log('🔗 Supabase URL:', supabaseUrl);
+    console.log('🔑 Supabase Key exists:', !!supabaseAnonKey);
+    
     const { data, error } = await client
       .from('equipment')
-      .select('count(*)')
+      .select('*')
       .limit(1);
 
     if (error) {
       console.error('Database connection test failed:', error);
+      console.log('❌ Connection error details:', error.message, error.code);
       return false;
     }
 
-    console.log('Database connection test successful');
+    console.log('✅ Database connection test successful, sample data:', data);
     return true;
   } catch (err) {
     console.error('Database connection test error:', err);

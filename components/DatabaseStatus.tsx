@@ -14,7 +14,9 @@ export function DatabaseStatus({ onRetry }: DatabaseStatusProps) {
   const checkConnection = async () => {
     setIsChecking(true);
     try {
+      console.log('🔍 Checking database connection...');
       const connected = await testConnection();
+      console.log('📊 Connection result:', connected);
       setIsConnected(connected);
     } catch (error) {
       console.error('Connection check failed:', error);

@@ -24,9 +24,10 @@ export default function WorkoutsScreen() {
   const [selectedCategory, setSelectedCategory] = useState('All');
 
   // Debug logging
-  console.log('Workouts Screen - Equipment data:', equipment?.length || 0);
-  console.log('Workouts Screen - Loading:', loading);
-  console.log('Workouts Screen - Error:', error);
+  console.log('🏋️ Workouts Screen - Equipment data:', equipment?.length || 0);
+  console.log('⏳ Workouts Screen - Loading:', loading);
+  console.log('❌ Workouts Screen - Error:', error);
+  console.log('📋 Workouts Screen - Equipment items:', equipment);
 
   // Transform equipment data to include workout information
   const equipmentWithWorkouts: EquipmentWithWorkouts[] = equipment.map(item => ({

@@ -29,10 +29,15 @@ export function useEquipment() {
       setLoading(true);
       setError(null);
       
+      console.log('🔍 Starting equipment fetch...');
+      
       const supabase = getSupabase();
       if (!supabase) {
+        console.error('❌ Supabase client not initialized');
         throw new Error('Supabase client not initialized');
       }
+
+      console.log('✅ Supabase client initialized, making query...');
 
       const { data, error } = await supabase
         .from('equipment')
@@ -46,14 +51,19 @@ export function useEquipment() {
         .order('name')
         .returns<Equipment[]>();
 
+      console.log('📊 Query result:', { data: data?.length || 0, error });
+
       if (error) throw error;
       
+      console.log('✅ Equipment fetched successfully:', data?.length || 0, 'items');
       setEquipment(data || []);
     } catch (err) {
       console.error('Error fetching equipment:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch equipment');
+      console.log('❌ Equipment fetch failed:', err);
     } finally {
       setLoading(false);
+      console.log('🏁 Equipment fetch completed');
     }
   };
 
