@@ -125,6 +125,7 @@ export type Database = {
           created_at: string;
           equipment_id: string | null;
         };
+      }
       workout_templates: {
         Row: {
           id: string;
