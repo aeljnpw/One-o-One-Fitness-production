@@ -41,7 +41,7 @@ export function useEquipment() {
           exercises (
             id,
             name
-          ),
+          )
         `)
         .order('name')
         .returns<Equipment[]>();
