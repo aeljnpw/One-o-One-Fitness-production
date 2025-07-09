@@ -1,3 +1,5 @@
+import 'dotenv/config';
+
 export default {
   name: 'One-o-One-Fitness',
   slug: 'one-o-one-fitness',
@@ -32,8 +34,8 @@ export default {
     'expo-router'
   ],
   extra: {
-    SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
-    SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+    supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    supabaseKey: process.env.EXPO_PUBLIC_SUPABASE_KEY,
     eas: {
       projectId: 'your-project-id'
     }

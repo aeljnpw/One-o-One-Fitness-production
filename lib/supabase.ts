@@ -5,7 +5,7 @@ import { Database } from './types';
 
 // Get environment variables from Expo Constants
 const getEnvVar = (key: string): string => {
-  const value = Constants.expoConfig?.extra?.[key] || process.env[`EXPO_PUBLIC_${key}`];
+  const value = Constants.expoConfig?.extra?.[key];
   if (!value) {
     console.warn(`⚠️ Environment variable ${key} is not set`);
   }
@@ -14,8 +14,8 @@ const getEnvVar = (key: string): string => {
 };
 
 // Get Supabase configuration
-const supabaseUrl = getEnvVar('SUPABASE_URL');
-const supabaseAnonKey = getEnvVar('SUPABASE_ANON_KEY');
+const supabaseUrl = getEnvVar('supabaseUrl');
+const supabaseAnonKey = getEnvVar('supabaseKey');
 
 // Create a singleton instance
 let supabaseInstance: ReturnType<typeof createClient<Database>> | null = null;
