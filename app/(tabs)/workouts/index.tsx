@@ -70,7 +70,10 @@ export default function WorkoutsScreen() {
   }
 
   const handleEquipmentPress = (equipmentId: string) => {
-    console.log('Navigating to equipment:', equipmentId);
+    console.log('🔗 Navigating to equipment:', {
+      equipmentId,
+      equipmentExists: equipment.some(eq => eq.id === equipmentId)
+    });
     router.push(`/workouts/equipment/${equipmentId}`);
   };
 

@@ -18,7 +18,7 @@ export default function EquipmentDetailScreen() {
   const equipmentItem = equipment.find(item => item.id === id);
   
   // Filter exercises by equipment ID using the optimized function
-  const equipmentExercises = getExercisesByEquipmentId(id || '');
+  const equipmentExercises = id ? getExercisesByEquipmentId(id) : [];
   
   const difficulties = ['All', 'beginner', 'intermediate', 'advanced'];
 
@@ -35,6 +35,11 @@ export default function EquipmentDetailScreen() {
         filteredExercises: filteredExercises.length,
         selectedDifficulty
       });
+    } else if (id && !equipmentItem) {
+      console.log('❌ Equipment not found:', {
+        searchingForId: id,
+        availableEquipment: equipment.map(eq => ({ id: eq.id, name: eq.name }))
+      });
     }
   }, [equipmentItem, equipmentExercises, filteredExercises]);
 
@@ -42,8 +47,42 @@ export default function EquipmentDetailScreen() {
     return <LoadingSpinner message="Loading equipment and exercises..." />;
   }
 
-  if (equipmentError || !equipmentItem) {
-    return <ErrorMessage message="Equipment not found" onRetry={refetchEquipment} />;
+  if (equipmentError) {
+    return <ErrorMessage message={`Equipment error: ${equipmentError}`} onRetry={refetchEquipment} />;
+  }
+
+  if (!equipmentItem) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <ArrowLeft size={24} color="#1E293B" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Equipment Not Found</Text>
+          <View style={styles.headerActions} />
+        </View>
+        
+        <View style={styles.notFoundContainer}>
+          <AlertCircle size={64} color="#EF4444" />
+          <Text style={styles.notFoundTitle}>Equipment Not Found</Text>
+          <Text style={styles.notFoundText}>
+            The equipment with ID "{id}" could not be found.
+          </Text>
+          <Text style={styles.notFoundSubtext}>
+            Available equipment: {equipment.length} items
+          </Text>
+          <TouchableOpacity 
+            style={styles.backToListButton}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.backToListText}>Back to Equipment List</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   const getDifficultyColor = (difficulty: string) => {
@@ -747,5 +786,45 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     color: '#64748B',
     marginBottom: 4,
+  },
+  notFoundContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  notFoundTitle: {
+    fontSize: 24,
+    fontFamily: 'Inter-Bold',
+    color: '#1E293B',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  notFoundText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    color: '#64748B',
+    textAlign: 'center',
+    marginBottom: 8,
+    lineHeight: 24,
+  },
+  notFoundSubtext: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#94A3B8',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  backToListButton: {
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  backToListText: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: '#FFFFFF',
   },
 });

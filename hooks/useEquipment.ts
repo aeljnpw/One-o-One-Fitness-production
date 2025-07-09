@@ -50,6 +50,7 @@ export function useEquipment() {
       const { data, error } = await supabase
         .from('equipment')
         .select('*')
+        .order('name')
         .returns<Equipment[]>();
 
       if (error) {
@@ -71,7 +72,7 @@ export function useEquipment() {
 
       console.log('✅ Equipment fetched successfully:', {
         count: equipmentWithEmptyExercises.length,
-        firstItem: equipmentWithEmptyExercises[0],
+        items: equipmentWithEmptyExercises.map(eq => ({ id: eq.id, name: eq.name })),
         categories: [...new Set(equipmentWithEmptyExercises.map(e => e.category))],
       });
 
