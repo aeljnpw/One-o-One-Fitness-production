@@ -74,6 +74,7 @@ export function useEquipment() {
         count: equipmentWithEmptyExercises.length,
         items: equipmentWithEmptyExercises.map(eq => ({ id: eq.id, name: eq.name })),
         categories: [...new Set(equipmentWithEmptyExercises.map(e => e.category))],
+        sampleIds: equipmentWithEmptyExercises.slice(0, 3).map(eq => eq.id)
       });
 
       setEquipment(equipmentWithEmptyExercises);

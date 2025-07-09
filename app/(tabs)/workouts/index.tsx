@@ -72,8 +72,20 @@ export default function WorkoutsScreen() {
   const handleEquipmentPress = (equipmentId: string) => {
     console.log('🔗 Navigating to equipment:', {
       equipmentId,
-      equipmentExists: equipment.some(eq => eq.id === equipmentId)
+      equipmentExists: equipment.some(eq => eq.id === equipmentId),
+      allEquipmentIds: equipment.map(eq => eq.id),
+      equipmentName: equipment.find(eq => eq.id === equipmentId)?.name
     });
+    
+    // Verify equipment exists before navigation
+    const equipmentExists = equipment.some(eq => eq.id === equipmentId);
+    if (!equipmentExists) {
+      console.error('❌ Equipment not found before navigation:', {
+        searchingFor: equipmentId,
+        available: equipment.map(eq => ({ id: eq.id, name: eq.name }))
+      });
+    }
+    
     router.push(`/workouts/equipment/${equipmentId}`);
   };
 

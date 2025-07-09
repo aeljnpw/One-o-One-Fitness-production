@@ -52,7 +52,7 @@ export function useExercises() {
         .from('exercises')
         .select(`
           *,
-          equipment_data:equipment_id (
+          equipment_data:equipment!equipment_id (
             id,
             name,
             description,
@@ -68,7 +68,13 @@ export function useExercises() {
       console.log('✅ Successfully fetched exercises:', {
         total: data?.length || 0,
         withEquipment: data?.filter(ex => ex.equipment_id).length || 0,
-        equipmentIds: [...new Set(data?.map(ex => ex.equipment_id).filter(Boolean))] || []
+        equipmentIds: [...new Set(data?.map(ex => ex.equipment_id).filter(Boolean))] || [],
+        sampleExercises: data?.slice(0, 3).map(ex => ({
+          id: ex.id,
+          name: ex.name,
+          equipment_id: ex.equipment_id,
+          hasEquipmentData: !!ex.equipment_data
+        })) || []
       });
       
       setExercises(data || []);
@@ -82,6 +88,13 @@ export function useExercises() {
 
   const getExercisesByEquipmentId = (equipmentId: string) => {
     console.log('🔍 Filtering exercises for equipment ID:', equipmentId);
+    console.log('🔍 Available exercises with equipment_id:', 
+      exercises.filter(ex => ex.equipment_id).map(ex => ({ 
+        id: ex.id, 
+        name: ex.name, 
+        equipment_id: ex.equipment_id 
+      }))
+    );
     const filtered = exercises.filter(exercise => exercise.equipment_id === equipmentId);
     console.log('✅ Found exercises for equipment:', {
       equipmentId,
@@ -102,7 +115,7 @@ export function useExercises() {
         .from('exercises')
         .select(`
           *,
-          equipment_data:equipment_id (
+          equipment_data:equipment!equipment_id (
             id,
             name,
             description,

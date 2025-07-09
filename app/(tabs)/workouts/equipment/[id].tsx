@@ -15,6 +15,18 @@ export default function EquipmentDetailScreen() {
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('All');
   const [isBookmarked, setIsBookmarked] = useState(false);
 
+  // Debug the ID parameter
+  useEffect(() => {
+    console.log('🔍 Equipment Detail Screen Mounted:', {
+      id,
+      idType: typeof id,
+      equipmentLoading,
+      exercisesLoading,
+      equipmentCount: equipment.length,
+      exercisesCount: exercises.length
+    });
+  }, [id, equipmentLoading, exercisesLoading, equipment.length, exercises.length]);
+
   const equipmentItem = equipment.find(item => item.id === id);
   
   // Filter exercises by equipment ID using the optimized function
