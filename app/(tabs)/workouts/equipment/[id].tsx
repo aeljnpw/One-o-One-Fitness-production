@@ -79,10 +79,6 @@ export default function EquipmentDetailScreen() {
     router.push(`/workouts/exercise/${exerciseId}`);
   };
 
-  const handleRetryExercises = () => {
-    refetchExercises();
-  };
-
   const ExerciseCard = ({ exercise }: { exercise: any }) => {
     const calories = calculateCalories(exercise.difficulty);
     const participants = generateParticipants(exercise.id);
@@ -249,7 +245,7 @@ export default function EquipmentDetailScreen() {
             </View>
             <TouchableOpacity 
               style={styles.retryButton}
-              onPress={handleRetryExercises}
+              onPress={refetchExercises}
             >
               <RefreshCw size={16} color="#2563EB" />
             </TouchableOpacity>
@@ -263,7 +259,7 @@ export default function EquipmentDetailScreen() {
             <Text style={styles.errorText}>{exercisesError}</Text>
             <TouchableOpacity 
               style={styles.retryButton}
-              onPress={handleRetryExercises}
+              onPress={refetchExercises}
             >
               <RefreshCw size={16} color="#EF4444" />
             </TouchableOpacity>

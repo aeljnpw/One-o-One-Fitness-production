@@ -5,8 +5,6 @@ import { Dumbbell, Clock, Flame, Filter, Search, ChevronRight, CircleAlert as Al
 import { useEquipment } from '@/hooks/useEquipment';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ErrorMessage } from '@/components/ErrorMessage';
-import { DatabaseStatus } from '@/components/DatabaseStatus';
-import { RLSTest } from '@/components/RLSTest';
 import { router } from 'expo-router';
 
 interface EquipmentWithWorkouts {
@@ -55,8 +53,6 @@ export default function WorkoutsScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <DatabaseStatus />
-        <RLSTest />
         <LoadingSpinner message="Loading equipment..." />
       </SafeAreaView>
     );
@@ -65,8 +61,6 @@ export default function WorkoutsScreen() {
   if (error) {
     return (
       <SafeAreaView style={styles.container}>
-        <DatabaseStatus />
-        <RLSTest />
         <View style={styles.header}>
           <Text style={styles.title}>Equipment & Workouts</Text>
         </View>
@@ -155,21 +149,6 @@ export default function WorkoutsScreen() {
     </ScrollView>
   );
 
-  // Debug info component
-  const DebugInfo = () => (
-    <View style={styles.debugInfo}>
-      <Text style={styles.debugText}>
-        Equipment loaded: {equipment.length} | Filtered: {filteredEquipment.length}
-      </Text>
-      {equipment.length === 0 && (
-        <TouchableOpacity style={styles.retryButton} onPress={refetch}>
-          <RefreshCw size={16} color="#2563EB" />
-          <Text style={styles.retryText}>Retry Loading</Text>
-        </TouchableOpacity>
-      )}
-    </View>
-  );
-
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -179,10 +158,6 @@ export default function WorkoutsScreen() {
           <Filter size={20} color="#64748B" />
         </TouchableOpacity>
       </View>
-
-      {/* Database Status */}
-      <DatabaseStatus />
-      <RLSTest />
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
@@ -200,9 +175,6 @@ export default function WorkoutsScreen() {
 
       {/* Category Filter */}
       <CategoryFilter />
-
-      {/* Debug Info */}
-      <DebugInfo />
 
       {/* Stats Overview */}
       <View style={styles.statsOverview}>
@@ -337,43 +309,6 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   activeCategoryButtonText: {
-    color: '#FFFFFF',
-  },
-  debugInfo: {
-    backgroundColor: '#FEF3C7',
-    marginHorizontal: 20,
-    marginBottom: 16,
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  debugText: {
-    fontSize: 12,
-    fontFamily: 'Inter-Medium',
-    color: '#92400E',
-    flex: 1,
-  },
-  retryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#2563EB',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    gap: 4,
-  },
-  retryText: {
-    fontSize: 12,
-    fontFamily: 'Inter-Medium',
-    color: '#FFFFFF',
-  },
-  retryButtonText: {
-    fontSize: 14,
-    fontFamily: 'Inter-Medium',
     color: '#FFFFFF',
   },
   statsOverview: {
