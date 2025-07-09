@@ -41,6 +41,8 @@ export function useExercises() {
       setLoading(true);
       setError(null);
       
+      console.log('🔍 Fetching exercises from database...');
+      
       const supabase = getSupabase();
       if (!supabase) {
         throw new Error('Supabase client not initialized');
@@ -63,6 +65,12 @@ export function useExercises() {
 
       if (error) throw error;
       
+      console.log('✅ Successfully fetched exercises:', {
+        total: data?.length || 0,
+        withEquipment: data?.filter(ex => ex.equipment_id).length || 0,
+        equipmentIds: [...new Set(data?.map(ex => ex.equipment_id).filter(Boolean))] || []
+      });
+      
       setExercises(data || []);
     } catch (err) {
       console.error('Error fetching exercises:', err);
@@ -70,6 +78,17 @@ export function useExercises() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getExercisesByEquipmentId = (equipmentId: string) => {
+    console.log('🔍 Filtering exercises for equipment ID:', equipmentId);
+    const filtered = exercises.filter(exercise => exercise.equipment_id === equipmentId);
+    console.log('✅ Found exercises for equipment:', {
+      equipmentId,
+      count: filtered.length,
+      exercises: filtered.map(ex => ({ id: ex.id, name: ex.name }))
+    });
+    return filtered;
   };
 
   const getExerciseById = async (id: string): Promise<Exercise | null> => {
@@ -133,6 +152,7 @@ export function useExercises() {
     loading, 
     error, 
     refetch: fetchExercises,
+    getExercisesByEquipmentId,
     getExerciseById,
     filterExercises 
   };

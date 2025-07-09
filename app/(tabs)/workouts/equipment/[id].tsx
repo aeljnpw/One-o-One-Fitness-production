@@ -11,14 +11,14 @@ import { ErrorMessage } from '@/components/ErrorMessage';
 export default function EquipmentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { equipment, loading: equipmentLoading, error: equipmentError, refetch: refetchEquipment } = useEquipment();
-  const { exercises, loading: exercisesLoading, error: exercisesError, refetch: refetchExercises } = useExercises();
+  const { exercises, loading: exercisesLoading, error: exercisesError, refetch: refetchExercises, getExercisesByEquipmentId } = useExercises();
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('All');
   const [isBookmarked, setIsBookmarked] = useState(false);
 
   const equipmentItem = equipment.find(item => item.id === id);
   
-  // Filter exercises by equipment ID
-  const equipmentExercises = exercises.filter(exercise => exercise.equipment_id === id);
+  // Filter exercises by equipment ID using the optimized function
+  const equipmentExercises = getExercisesByEquipmentId(id || '');
   
   const difficulties = ['All', 'beginner', 'intermediate', 'advanced'];
 
@@ -27,9 +27,15 @@ export default function EquipmentDetailScreen() {
   );
 
   useEffect(() => {
-    console.log('Equipment item:', equipmentItem);
-    console.log('Equipment exercises:', equipmentExercises.length);
-    console.log('Filtered exercises:', filteredExercises.length);
+    if (id && equipmentItem) {
+      console.log('📋 Equipment Detail Page:', {
+        equipmentId: id,
+        equipmentName: equipmentItem.name,
+        totalExercises: equipmentExercises.length,
+        filteredExercises: filteredExercises.length,
+        selectedDifficulty
+      });
+    }
   }, [equipmentItem, equipmentExercises, filteredExercises]);
 
   if (equipmentLoading || exercisesLoading) {
@@ -240,7 +246,7 @@ export default function EquipmentDetailScreen() {
             <View style={styles.statusContent}>
               <Text style={styles.statusTitle}>No Exercises Found</Text>
               <Text style={styles.statusText}>
-                No exercises found for {equipmentItem.name}. Add exercises to your database with equipment_id: {id}
+                No exercises found for {equipmentItem.name}. Make sure exercises in your database have equipment_id set to: {id}
               </Text>
             </View>
             <TouchableOpacity 
@@ -324,13 +330,14 @@ export default function EquipmentDetailScreen() {
               <Plus size={48} color="#2563EB" />
               <Text style={styles.createExerciseTitle}>Add Your First Exercise</Text>
               <Text style={styles.createExerciseText}>
-                Start adding exercises for {equipmentItem.name} to your database. Set the equipment_id to {id} when creating exercises.
+                To see exercises for {equipmentItem.name}, make sure your exercises table has records with equipment_id set to: {id}
               </Text>
               <View style={styles.createExerciseInfo}>
-                <Text style={styles.createExerciseInfoTitle}>Database Info:</Text>
+                <Text style={styles.createExerciseInfoTitle}>Required Database Setup:</Text>
                 <Text style={styles.createExerciseInfoText}>Table: exercises</Text>
                 <Text style={styles.createExerciseInfoText}>Equipment ID: {id}</Text>
                 <Text style={styles.createExerciseInfoText}>Equipment: {equipmentItem.name}</Text>
+                <Text style={styles.createExerciseInfoText}>Column: equipment_id (foreign key)</Text>
               </View>
             </View>
           </View>
