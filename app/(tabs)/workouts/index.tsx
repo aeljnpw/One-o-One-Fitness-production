@@ -70,8 +70,19 @@ export default function WorkoutsScreen() {
   }
 
   const handleEquipmentPress = (equipmentId: string) => {
+    // Ensure equipmentId is always a string UUID
+    if (typeof equipmentId !== 'string' || !equipmentId.trim()) {
+      console.error('❌ Invalid equipment ID:', {
+        equipmentId,
+        type: typeof equipmentId,
+        isEmpty: !equipmentId?.trim()
+      });
+      return;
+    }
+    
     console.log('🔗 Navigating to equipment:', {
       equipmentId,
+      equipmentIdType: typeof equipmentId,
       equipmentExists: equipment.some(eq => eq.id === equipmentId),
       allEquipmentIds: equipment.map(eq => eq.id),
       equipmentName: equipment.find(eq => eq.id === equipmentId)?.name
@@ -84,6 +95,7 @@ export default function WorkoutsScreen() {
         searchingFor: equipmentId,
         available: equipment.map(eq => ({ id: eq.id, name: eq.name }))
       });
+      // Still navigate but with better error handling on the detail page
     }
     
     router.push(`/workouts/equipment/${equipmentId}`);

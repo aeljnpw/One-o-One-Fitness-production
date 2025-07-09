@@ -88,19 +88,41 @@ export function useExercises() {
 
   const getExercisesByEquipmentId = (equipmentId: string) => {
     console.log('🔍 Filtering exercises for equipment ID:', equipmentId);
+    
+    // Validate equipment_id types in exercises
+    exercises.forEach(exercise => {
+      if (exercise.equipment_id && typeof exercise.equipment_id !== 'string') {
+        console.warn('Invalid equipment_id type:', {
+          exerciseId: exercise.id,
+          exerciseName: exercise.name,
+          equipment_id: exercise.equipment_id,
+          type: typeof exercise.equipment_id
+        });
+      }
+    });
+    
     console.log('🔍 Available exercises with equipment_id:', 
       exercises.filter(ex => ex.equipment_id).map(ex => ({ 
         id: ex.id, 
         name: ex.name, 
-        equipment_id: ex.equipment_id 
+        equipment_id: ex.equipment_id,
+        equipment_id_type: typeof ex.equipment_id
       }))
     );
-    const filtered = exercises.filter(exercise => exercise.equipment_id === equipmentId);
+    
+    // Ensure both values are strings for comparison
+    const filtered = exercises.filter(exercise => {
+      const exerciseEquipmentId = String(exercise.equipment_id || '');
+      const searchEquipmentId = String(equipmentId || '');
+      return exerciseEquipmentId === searchEquipmentId && exerciseEquipmentId !== '';
+    });
+    
     console.log('✅ Found exercises for equipment:', {
       equipmentId,
       count: filtered.length,
       exercises: filtered.map(ex => ({ id: ex.id, name: ex.name }))
     });
+    
     return filtered;
   };
 

@@ -15,22 +15,27 @@ export default function EquipmentDetailScreen() {
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('All');
   const [isBookmarked, setIsBookmarked] = useState(false);
 
+  // Normalize the ID parameter to handle array or string types
+  const normalizedId = typeof id === 'string' ? id : Array.isArray(id) ? id[0] : '';
+
   // Debug the ID parameter
   useEffect(() => {
-    console.log('🔍 Equipment Detail Screen Mounted:', {
+    console.log('[EquipmentDetail] Loaded with ID:', {
       id,
+      normalizedId,
       idType: typeof id,
+      isArray: Array.isArray(id),
       equipmentLoading,
       exercisesLoading,
       equipmentCount: equipment.length,
       exercisesCount: exercises.length
     });
-  }, [id, equipmentLoading, exercisesLoading, equipment.length, exercises.length]);
+  }, [id, normalizedId, equipmentLoading, exercisesLoading, equipment.length, exercises.length]);
 
-  const equipmentItem = equipment.find(item => item.id === id);
+  const equipmentItem = equipment.find(item => item.id === normalizedId);
   
   // Filter exercises by equipment ID using the optimized function
-  const equipmentExercises = id ? getExercisesByEquipmentId(id) : [];
+  const equipmentExercises = normalizedId ? getExercisesByEquipmentId(normalizedId) : [];
   
   const difficulties = ['All', 'beginner', 'intermediate', 'advanced'];
 
@@ -39,21 +44,24 @@ export default function EquipmentDetailScreen() {
   );
 
   useEffect(() => {
-    if (id && equipmentItem) {
+    if (normalizedId && equipmentItem) {
+      console.log('[EquipmentDetail] Matched Equipment:', equipmentItem.name);
+      console.log('[EquipmentDetail] Exercises found:', equipmentExercises.length);
       console.log('📋 Equipment Detail Page:', {
-        equipmentId: id,
+        equipmentId: normalizedId,
         equipmentName: equipmentItem.name,
         totalExercises: equipmentExercises.length,
         filteredExercises: filteredExercises.length,
         selectedDifficulty
       });
-    } else if (id && !equipmentItem) {
+    } else if (normalizedId && !equipmentItem) {
       console.log('❌ Equipment not found:', {
-        searchingForId: id,
+        searchingForId: normalizedId,
+        originalId: id,
         availableEquipment: equipment.map(eq => ({ id: eq.id, name: eq.name }))
       });
     }
-  }, [equipmentItem, equipmentExercises, filteredExercises]);
+  }, [normalizedId, equipmentItem, equipmentExercises, filteredExercises, selectedDifficulty]);
 
   if (equipmentLoading || exercisesLoading) {
     return <LoadingSpinner message="Loading equipment and exercises..." />;
@@ -81,17 +89,49 @@ export default function EquipmentDetailScreen() {
           <AlertCircle size={64} color="#EF4444" />
           <Text style={styles.notFoundTitle}>Equipment Not Found</Text>
           <Text style={styles.notFoundText}>
-            The equipment with ID "{id}" could not be found.
+            The equipment with ID "{normalizedId}" could not be found.
           </Text>
           <Text style={styles.notFoundSubtext}>
             Available equipment: {equipment.length} items
           </Text>
+          
+          {/* Show available equipment for debugging */}
+          {equipment.length > 0 && (
+            <View style={styles.availableEquipmentContainer}>
+              <Text style={styles.availableEquipmentTitle}>Available Equipment:</Text>
+              {equipment.slice(0, 5).map((eq) => (
+                <TouchableOpacity
+                  key={eq.id}
+                  style={styles.availableEquipmentItem}
+                  onPress={() => router.replace(`/workouts/equipment/${eq.id}`)}
+                >
+                  <Text style={styles.availableEquipmentText}>{eq.name}</Text>
+                  <Text style={styles.availableEquipmentId}>ID: {eq.id}</Text>
+                </TouchableOpacity>
+              ))}
+              {equipment.length > 5 && (
+                <Text style={styles.moreEquipmentText}>
+                  ...and {equipment.length - 5} more
+                </Text>
+              )}
+            </View>
+          )}
+          
           <TouchableOpacity 
             style={styles.backToListButton}
             onPress={() => router.back()}
           >
             <Text style={styles.backToListText}>Back to Equipment List</Text>
           </TouchableOpacity>
+          
+          {/* Debug info for troubleshooting */}
+          <View style={styles.debugContainer}>
+            <Text style={styles.debugTitle}>Debug Info:</Text>
+            <Text style={styles.debugText}>Original ID: {JSON.stringify(id)}</Text>
+            <Text style={styles.debugText}>Normalized ID: {normalizedId}</Text>
+            <Text style={styles.debugText}>Equipment loaded: {equipment.length}</Text>
+            <Text style={styles.debugText}>Exercises loaded: {exercises.length}</Text>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -297,7 +337,7 @@ export default function EquipmentDetailScreen() {
             <View style={styles.statusContent}>
               <Text style={styles.statusTitle}>No Exercises Found</Text>
               <Text style={styles.statusText}>
-                No exercises found for {equipmentItem.name}. Make sure exercises in your database have equipment_id set to: {id}
+                No exercises found for {equipmentItem.name}. Make sure exercises in your database have equipment_id set to: {normalizedId}
               </Text>
             </View>
             <TouchableOpacity 
@@ -381,12 +421,12 @@ export default function EquipmentDetailScreen() {
               <Plus size={48} color="#2563EB" />
               <Text style={styles.createExerciseTitle}>Add Your First Exercise</Text>
               <Text style={styles.createExerciseText}>
-                To see exercises for {equipmentItem.name}, make sure your exercises table has records with equipment_id set to: {id}
+                To see exercises for {equipmentItem.name}, make sure your exercises table has records with equipment_id set to: {normalizedId}
               </Text>
               <View style={styles.createExerciseInfo}>
                 <Text style={styles.createExerciseInfoTitle}>Required Database Setup:</Text>
                 <Text style={styles.createExerciseInfoText}>Table: exercises</Text>
-                <Text style={styles.createExerciseInfoText}>Equipment ID: {id}</Text>
+                <Text style={styles.createExerciseInfoText}>Equipment ID: {normalizedId}</Text>
                 <Text style={styles.createExerciseInfoText}>Equipment: {equipmentItem.name}</Text>
                 <Text style={styles.createExerciseInfoText}>Column: equipment_id (foreign key)</Text>
               </View>
@@ -838,5 +878,68 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
     color: '#FFFFFF',
+  },
+  debugContainer: {
+    marginTop: 24,
+    padding: 16,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  debugTitle: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    color: '#1E293B',
+    marginBottom: 8,
+  },
+  debugText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: '#64748B',
+    marginBottom: 4,
+  },
+  availableEquipmentContainer: {
+    marginTop: 16,
+    marginBottom: 16,
+    padding: 12,
+    backgroundColor: '#F0FDF4',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+    maxWidth: '100%',
+  },
+  availableEquipmentTitle: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    color: '#059669',
+    marginBottom: 8,
+  },
+  availableEquipmentItem: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    marginBottom: 4,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  availableEquipmentText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    color: '#1E293B',
+  },
+  availableEquipmentId: {
+    fontSize: 10,
+    fontFamily: 'Inter-Regular',
+    color: '#64748B',
+  },
+  moreEquipmentText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: '#64748B',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 4,
   },
 });
