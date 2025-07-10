@@ -26,7 +26,7 @@ const getEnvVar = (key: string): string => {
 
 // Get Supabase configuration
 const supabaseUrl = getEnvVar('supabaseUrl') || getEnvVar('SUPABASE_URL');
-const supabaseAnonKey = getEnvVar('supabaseKey') || getEnvVar('SUPABASE_ANON_KEY');
+const supabaseAnonKey = getEnvVar('supabaseKey') || getEnvVar('SUPABASE_ANON_KEY') || getEnvVar('supabaseAnonKey');
 
 // Create a singleton instance
 let supabaseInstance: ReturnType<typeof createClient<Database>> | null = null;
