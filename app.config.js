@@ -5,7 +5,7 @@ export default {
   slug: 'one-o-one-fitness',
   version: '1.0.0',
   orientation: 'portrait',
-  icon: './assets/images/icon.png',
+  icon: './assets/icon.png',
   userInterfaceStyle: 'light',
   scheme: 'one-o-one-fitness',
   splash: {

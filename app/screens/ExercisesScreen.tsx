@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, ActivityIndicator, StyleSheet } from 'react-native';
-import { getSupabase } from '@/lib/supabase';
+import { supabase } from '../../utils/supabase';
 
 interface Exercise {
   id: string;
@@ -23,7 +23,7 @@ export default function ExercisesScreen() {
       setLoading(true);
       setError(null);
 
-      const { data, error } = await getSupabase()
+      const { data, error } = await supabase
         .from('exercises')
         .select('*')
         .order('name');

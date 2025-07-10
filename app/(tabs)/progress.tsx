@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { TrendingUp, Calendar, Target, Award, ChartBar as BarChart3, Activity } from 'lucide-react-native';
+import { TrendingUp, Calendar, Target, Award, ChartBar as BarChart3, Activity, RefreshCw } from 'lucide-react-native';
+import { useUserProgress } from '@/hooks/useUserProgress';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { ErrorMessage } from '@/components/ErrorMessage';
 
 const { width } = Dimensions.get('window');
 
@@ -12,19 +15,45 @@ interface ProgressData {
   color: string;
 }
 
-const weeklyData: ProgressData[] = [
-  { label: 'Mon', value: 45, maxValue: 60, color: '#2563EB' },
-  { label: 'Tue', value: 60, maxValue: 60, color: '#2563EB' },
-  { label: 'Wed', value: 30, maxValue: 60, color: '#2563EB' },
-  { label: 'Thu', value: 52, maxValue: 60, color: '#2563EB' },
-  { label: 'Fri', value: 38, maxValue: 60, color: '#2563EB' },
-  { label: 'Sat', value: 48, maxValue: 60, color: '#2563EB' },
-  { label: 'Sun', value: 25, maxValue: 60, color: '#2563EB' },
-];
-
 export default function ProgressScreen() {
+  const { progressData, loading, error, refetch } = useUserProgress();
   const [selectedPeriod, setSelectedPeriod] = useState('Week');
   const periods = ['Week', 'Month', 'Year'];
+
+  if (loading) {
+    return <LoadingSpinner message="Loading your progress..." />;
+  }
+
+  if (error) {
+    return <ErrorMessage message={error} onRetry={refetch} />;
+  }
+
+  if (!progressData) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.emptyState}>
+          <Activity size={64} color="#94A3B8" />
+          <Text style={styles.emptyStateTitle}>No Progress Data</Text>
+          <Text style={styles.emptyStateText}>
+            Start working out to see your progress here!
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const weeklyData: ProgressData[] = progressData.weeklyWorkouts.map((value, index) => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const today = new Date().getDay();
+    const dayIndex = (today - 6 + index + 7) % 7;
+    
+    return {
+      label: days[dayIndex],
+      value: Math.min(value, 60), // Cap at 60 minutes for display
+      maxValue: 60,
+      color: '#2563EB'
+    };
+  });
 
   const renderBarChart = () => {
     const chartWidth = width - 80;
@@ -40,7 +69,7 @@ export default function ProgressScreen() {
                   style={[
                     styles.bar,
                     {
-                      height: `${(item.value / item.maxValue) * 100}%`,
+                      height: `${Math.max((item.value / item.maxValue) * 100, 5)}%`,
                       backgroundColor: item.color,
                       width: barWidth,
                     }
@@ -55,35 +84,57 @@ export default function ProgressScreen() {
     );
   };
 
+  const formatTime = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours > 0) {
+      return `${hours}h ${mins}m`;
+    }
+    return `${mins}m`;
+  };
+
+  const getTrendText = () => {
+    const thisWeekWorkouts = weeklyData.reduce((sum, day) => sum + (day.value > 0 ? 1 : 0), 0);
+    const lastWeekWorkouts = Math.max(1, thisWeekWorkouts - 1); // Simplified calculation
+    const change = ((thisWeekWorkouts - lastWeekWorkouts) / lastWeekWorkouts * 100);
+    
+    if (change > 0) {
+      return `+${Math.round(change)}% this week`;
+    } else if (change < 0) {
+      return `${Math.round(change)}% this week`;
+    }
+    return 'No change this week';
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Progress</Text>
-          <TouchableOpacity style={styles.calendarButton}>
-            <Calendar size={24} color="#64748B" />
+          <TouchableOpacity style={styles.calendarButton} onPress={refetch}>
+            <RefreshCw size={24} color="#64748B" />
           </TouchableOpacity>
         </View>
 
         {/* Stats Overview */}
         <View style={styles.statsOverview}>
           <View style={styles.mainStat}>
-            <Text style={styles.mainStatValue}>1,247</Text>
+            <Text style={styles.mainStatValue}>{progressData.totalWorkouts.toLocaleString()}</Text>
             <Text style={styles.mainStatLabel}>Total Workouts</Text>
             <View style={styles.trendContainer}>
               <TrendingUp size={16} color="#059669" />
-              <Text style={styles.trendText}>+12% this month</Text>
+              <Text style={styles.trendText}>{getTrendText()}</Text>
             </View>
           </View>
           
           <View style={styles.subStats}>
             <View style={styles.subStat}>
-              <Text style={styles.subStatValue}>78</Text>
+              <Text style={styles.subStatValue}>{progressData.thisMonthWorkouts}</Text>
               <Text style={styles.subStatLabel}>This Month</Text>
             </View>
             <View style={styles.subStat}>
-              <Text style={styles.subStatValue}>156h</Text>
+              <Text style={styles.subStatValue}>{formatTime(progressData.totalTimeMinutes)}</Text>
               <Text style={styles.subStatLabel}>Total Time</Text>
             </View>
           </View>
@@ -130,12 +181,19 @@ export default function ProgressScreen() {
                 </View>
                 <View style={styles.goalInfo}>
                   <Text style={styles.goalTitle}>Weekly Workouts</Text>
-                  <Text style={styles.goalProgress}>5/7 completed</Text>
+                  <Text style={styles.goalProgress}>
+                    {progressData.thisMonthWorkouts}/12 this month
+                  </Text>
                 </View>
-                <Text style={styles.goalPercentage}>71%</Text>
+                <Text style={styles.goalPercentage}>
+                  {Math.round(progressData.weeklyGoalProgress)}%
+                </Text>
               </View>
               <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: '71%' }]} />
+                <View style={[
+                  styles.progressFill, 
+                  { width: `${Math.min(progressData.weeklyGoalProgress, 100)}%` }
+                ]} />
               </View>
             </View>
 
@@ -146,12 +204,22 @@ export default function ProgressScreen() {
                 </View>
                 <View style={styles.goalInfo}>
                   <Text style={styles.goalTitle}>Calories Burned</Text>
-                  <Text style={styles.goalProgress}>1,890/2,500 cal</Text>
+                  <Text style={styles.goalProgress}>
+                    {progressData.totalCaloriesBurned.toLocaleString()}/10,000 cal
+                  </Text>
                 </View>
-                <Text style={styles.goalPercentage}>76%</Text>
+                <Text style={styles.goalPercentage}>
+                  {Math.round(progressData.calorieGoalProgress)}%
+                </Text>
               </View>
               <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: '76%', backgroundColor: '#059669' }]} />
+                <View style={[
+                  styles.progressFill, 
+                  { 
+                    width: `${Math.min(progressData.calorieGoalProgress, 100)}%`, 
+                    backgroundColor: '#059669' 
+                  }
+                ]} />
               </View>
             </View>
 
@@ -162,12 +230,22 @@ export default function ProgressScreen() {
                 </View>
                 <View style={styles.goalInfo}>
                   <Text style={styles.goalTitle}>Workout Streak</Text>
-                  <Text style={styles.goalProgress}>14 days current</Text>
+                  <Text style={styles.goalProgress}>
+                    {progressData.currentStreak} days current
+                  </Text>
                 </View>
-                <Text style={styles.goalPercentage}>93%</Text>
+                <Text style={styles.goalPercentage}>
+                  {Math.round(progressData.streakGoalProgress)}%
+                </Text>
               </View>
               <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: '93%', backgroundColor: '#EA580C' }]} />
+                <View style={[
+                  styles.progressFill, 
+                  { 
+                    width: `${Math.min(progressData.streakGoalProgress, 100)}%`, 
+                    backgroundColor: '#EA580C' 
+                  }
+                ]} />
               </View>
             </View>
           </View>
@@ -177,31 +255,29 @@ export default function ProgressScreen() {
         <View style={styles.achievementsSection}>
           <Text style={styles.sectionTitle}>Recent Achievements</Text>
           <View style={styles.achievementsList}>
-            <View style={styles.achievementCard}>
-              <View style={styles.achievementIcon}>
-                <Award size={24} color="#F59E0B" />
-              </View>
-              <View style={styles.achievementContent}>
-                <Text style={styles.achievementTitle}>Consistency Master</Text>
-                <Text style={styles.achievementDescription}>
-                  Completed 7 workouts in a row
+            {progressData.recentAchievements.length > 0 ? (
+              progressData.recentAchievements.map((achievement) => (
+                <View key={achievement.id} style={styles.achievementCard}>
+                  <View style={styles.achievementIcon}>
+                    <Text style={styles.achievementEmoji}>{achievement.icon}</Text>
+                  </View>
+                  <View style={styles.achievementContent}>
+                    <Text style={styles.achievementTitle}>{achievement.title}</Text>
+                    <Text style={styles.achievementDescription}>
+                      {achievement.description}
+                    </Text>
+                  </View>
+                  <Text style={styles.achievementDate}>{achievement.date}</Text>
+                </View>
+              ))
+            ) : (
+              <View style={styles.emptyAchievements}>
+                <Award size={32} color="#94A3B8" />
+                <Text style={styles.emptyAchievementsText}>
+                  Complete more workouts to unlock achievements!
                 </Text>
               </View>
-              <Text style={styles.achievementDate}>Today</Text>
-            </View>
-
-            <View style={styles.achievementCard}>
-              <View style={styles.achievementIcon}>
-                <Target size={24} color="#8B5CF6" />
-              </View>
-              <View style={styles.achievementContent}>
-                <Text style={styles.achievementTitle}>Goal Crusher</Text>
-                <Text style={styles.achievementDescription}>
-                  Exceeded weekly goal by 20%
-                </Text>
-              </View>
-              <Text style={styles.achievementDate}>2 days ago</Text>
-            </View>
+            )}
           </View>
         </View>
 
@@ -209,21 +285,22 @@ export default function ProgressScreen() {
         <View style={styles.recordsSection}>
           <Text style={styles.sectionTitle}>Personal Records</Text>
           <View style={styles.recordsList}>
-            <View style={styles.recordItem}>
-              <Text style={styles.recordExercise}>Push-ups</Text>
-              <Text style={styles.recordValue}>52 reps</Text>
-              <Text style={styles.recordDate}>Last week</Text>
-            </View>
-            <View style={styles.recordItem}>
-              <Text style={styles.recordExercise}>Plank Hold</Text>
-              <Text style={styles.recordValue}>3:45</Text>
-              <Text style={styles.recordDate}>5 days ago</Text>
-            </View>
-            <View style={styles.recordItem}>
-              <Text style={styles.recordExercise}>Workout Duration</Text>
-              <Text style={styles.recordValue}>87 min</Text>
-              <Text style={styles.recordDate}>Yesterday</Text>
-            </View>
+            {progressData.personalRecords.length > 0 ? (
+              progressData.personalRecords.map((record, index) => (
+                <View key={`${record.exercise}-${record.type}-${index}`} style={styles.recordItem}>
+                  <Text style={styles.recordExercise}>{record.exercise}</Text>
+                  <Text style={styles.recordValue}>{record.value}</Text>
+                  <Text style={styles.recordDate}>{record.date}</Text>
+                </View>
+              ))
+            ) : (
+              <View style={styles.emptyRecords}>
+                <Target size={32} color="#94A3B8" />
+                <Text style={styles.emptyRecordsText}>
+                  Complete exercises to track your personal records!
+                </Text>
+              </View>
+            )}
           </View>
         </View>
       </ScrollView>
@@ -490,6 +567,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
   },
+  achievementEmoji: {
+    fontSize: 24,
+  },
   achievementContent: {
     flex: 1,
   },
@@ -547,5 +627,47 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Inter-Regular',
     color: '#64748B',
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  emptyStateTitle: {
+    fontSize: 24,
+    fontFamily: 'Inter-Bold',
+    color: '#1E293B',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  emptyAchievements: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  emptyAchievementsText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    color: '#64748B',
+    textAlign: 'center',
+    marginTop: 12,
+  },
+  emptyRecords: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  emptyRecordsText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    color: '#64748B',
+    textAlign: 'center',
+    marginTop: 12,
   },
 });
