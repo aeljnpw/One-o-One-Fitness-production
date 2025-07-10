@@ -28,18 +28,37 @@ const getEnvVar = (key: string): string => {
 const supabaseUrl = getEnvVar('supabaseUrl') || getEnvVar('SUPABASE_URL');
 const supabaseAnonKey = getEnvVar('supabaseKey') || getEnvVar('SUPABASE_ANON_KEY') || getEnvVar('supabaseAnonKey');
 
+// Validate URL format
+const isValidUrl = (url: string) => {
+  try {
+    new URL(url);
+    return url.includes('supabase.co') && !url.includes('placeholder');
+  } catch {
+    return false;
+  }
+};
+
+// Validate key format (basic check for JWT-like structure)
+const isValidKey = (key: string) => {
+  return key && key.length > 50 && !key.includes('placeholder') && key.startsWith('eyJ');
+};
+
 // Create a singleton instance
 let supabaseInstance: ReturnType<typeof createClient<Database>> | null = null;
 
 export const getSupabase = () => {
   if (!supabaseInstance) {
-    if (!supabaseUrl || !supabaseAnonKey) {
+    if (!supabaseUrl || !supabaseAnonKey || !isValidUrl(supabaseUrl) || !isValidKey(supabaseAnonKey)) {
       console.error('❌ Supabase configuration is missing:', {
-        url: supabaseUrl ? '✅ Set' : '❌ Missing',
-        key: supabaseAnonKey ? '✅ Set' : '❌ Missing'
+        url: !supabaseUrl ? '❌ Missing' : !isValidUrl(supabaseUrl) ? '❌ Invalid format' : '✅ Valid',
+        key: !supabaseAnonKey ? '❌ Missing' : !isValidKey(supabaseAnonKey) ? '❌ Invalid format' : '✅ Valid',
+        urlValue: supabaseUrl ? (supabaseUrl.includes('placeholder') ? 'Contains placeholder' : 'Set') : 'Not set',
+        keyValue: supabaseAnonKey ? (supabaseAnonKey.includes('placeholder') ? 'Contains placeholder' : 'Set') : 'Not set'
       });
       
-      // Return null instead of throwing to allow app to continue
+      console.warn('⚠️ Please update your .env file with valid Supabase credentials');
+      console.warn('📝 Get your credentials from: https://app.supabase.com/project/your-project/settings/api');
+      
       return null;
     }
 

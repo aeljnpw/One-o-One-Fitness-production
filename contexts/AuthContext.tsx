@@ -79,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const supabase = getSupabase();
       if (!supabase) {
-        throw new Error('Supabase client not initialized');
+        return { error: new Error('Supabase client not initialized. Please check your environment configuration.') };
       }
 
       const { error } = await supabase.auth.signInWithPassword({
@@ -96,7 +96,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const supabase = getSupabase();
       if (!supabase) {
-        throw new Error('Supabase client not initialized');
+        console.warn('Supabase client not initialized, skipping sign out');
+        return;
       }
 
       await supabase.auth.signOut();
@@ -109,7 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const supabase = getSupabase();
       if (!supabase) {
-        throw new Error('Supabase client not initialized');
+        return { error: new Error('Supabase client not initialized. Please check your environment configuration.') };
       }
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -125,7 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const supabase = getSupabase();
       if (!supabase) {
-        throw new Error('Supabase client not initialized');
+        return { error: new Error('Supabase client not initialized. Please check your environment configuration.') };
       }
 
       const { error } = await supabase.auth.updateUser({
