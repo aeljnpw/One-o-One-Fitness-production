@@ -227,7 +227,7 @@ export default function EquipmentDetailScreen() {
           </View>
           
           <View style={styles.tagsContainer}>
-            {exercise.primary_muscles?.slice(0, 3).map((muscle: string, index: number) => (
+            {(exercise.primary_muscles || []).slice(0, 3).map((muscle: string, index: number) => (
               <View key={index} style={styles.tag}>
                 <Text style={styles.tagText}>{muscle}</Text>
               </View>

@@ -5,7 +5,7 @@ export default {
   slug: 'one-o-one-fitness',
   version: '1.0.0',
   orientation: 'portrait',
-  icon: './assets/icon.png',
+  icon: './assets/images/icon.png',
   userInterfaceStyle: 'light',
   scheme: 'one-o-one-fitness',
   splash: {
@@ -35,7 +35,7 @@ export default {
   ],
   extra: {
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
-    supabaseKey: process.env.EXPO_PUBLIC_SUPABASE_KEY,
+    supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
     eas: {
       projectId: 'your-project-id'
     }
