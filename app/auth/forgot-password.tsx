@@ -193,4 +193,4 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-SemiBold',
     color: '#2563EB',
   },
-}); 
+});

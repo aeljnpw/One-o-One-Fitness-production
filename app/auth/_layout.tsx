@@ -9,4 +9,4 @@ export default function AuthLayout() {
       <Stack.Screen name="reset-password" />
     </Stack>
   );
-} 
+}

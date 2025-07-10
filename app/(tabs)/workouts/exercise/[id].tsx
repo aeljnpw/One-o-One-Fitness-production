@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Play, Pause, Square, Clock, Target, Dumbbell, Info, CircleCheck as CheckCircle, Circle, Plus, Minus, RotateCcw, Save } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -47,6 +47,7 @@ export default function ExerciseDetailScreen() {
   const [currentSetIndex, setCurrentSetIndex] = useState(0);
   const [restTimer, setRestTimer] = useState(0);
   const [isResting, setIsResting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     loadExercise();
@@ -173,28 +174,117 @@ export default function ExerciseDetailScreen() {
   };
 
   const handleFinishExercise = async () => {
+    // Validate that at least one set is completed
     const completedSets = progress.sets.filter(set => set.completed);
     
     if (completedSets.length === 0) {
-      Alert.alert('No Sets Completed', 'Please complete at least one set before finishing.');
+      Alert.alert(
+        'No Sets Completed', 
+        'Please complete at least one set before finishing the exercise.',
+        [{ text: 'OK', style: 'default' }]
+      );
       return;
     }
 
+    // Validate that completed sets have valid data
+    const invalidSets = completedSets.filter(set => 
+      (set.reps <= 0 && set.duration <= 0) || set.restTime < 0
+    );
+    
+    if (invalidSets.length > 0) {
+      Alert.alert(
+        'Invalid Set Data',
+        'Please ensure all completed sets have valid reps/duration and rest time values.',
+        [{ text: 'OK', style: 'default' }]
+      );
+      return;
+    }
+
+    // Show confirmation dialog
+    Alert.alert(
+      'Finish Exercise',
+      `Are you sure you want to finish this exercise? You completed ${completedSets.length} set${completedSets.length > 1 ? 's' : ''}.`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Finish',
+          style: 'default',
+          onPress: () => finishExerciseConfirmed(completedSets)
+        }
+      ]
+    );
+  };
+
+  const finishExerciseConfirmed = async (completedSets: typeof progress.sets) => {
+    setIsSaving(true);
+    
     try {
-      // Save exercise sets to database
-      if (currentSessionId) {
-        for (const set of completedSets) {
-          await addExerciseSet({
-            workout_session_id: currentSessionId,
+      let sessionId = currentSessionId;
+      
+      // Create session if it doesn't exist
+      if (!sessionId) {
+        const session = await createWorkoutSession({
+          name: `${exercise.name} Session`,
+          duration: Math.floor(timer / 60),
+          calories_burned: calculateCalories(timer / 60, exercise.difficulty),
+        });
+        
+        if (!session) {
+          throw new Error('Failed to create workout session');
+        }
+        
+        sessionId = session.id;
+        setCurrentSessionId(sessionId);
+      }
+
+      // Save all completed exercise sets to database
+      const savePromises = completedSets.map(async (set, index) => {
+        try {
+          const result = await addExerciseSet({
+            workout_session_id: sessionId!,
             exercise_id: exercise.id,
             set_number: set.setNumber,
-            reps: set.reps,
-            weight: set.weight > 0 ? set.weight : undefined,
+            reps: set.reps > 0 ? set.reps : null,
+            weight: set.weight > 0 ? set.weight : null,
+            duration: set.duration && set.duration > 0 ? set.duration : null,
             rest_time: set.restTime,
+            notes: progress.notes || null,
           });
+          
+          if (!result) {
+            throw new Error(`Failed to save set ${set.setNumber}`);
+          }
+          
+          return result;
+        } catch (error) {
+          console.error(`Error saving set ${set.setNumber}:`, error);
+          throw new Error(`Failed to save set ${set.setNumber}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      });
+
+      // Wait for all sets to be saved
+      await Promise.all(savePromises);
+
+      // Update workout session with final duration and calories
+      const finalDuration = Math.floor(timer / 60);
+      const finalCalories = calculateCalories(finalDuration, exercise.difficulty);
+      
+      if (currentSessionId) {
+        const updateSuccess = await updateWorkoutSession(currentSessionId, {
+          duration: finalDuration,
+          calories_burned: finalCalories,
+          notes: progress.notes || null,
+        });
+        
+        if (!updateSuccess) {
+          console.warn('Failed to update workout session, but exercise sets were saved');
         }
       }
 
+      // Update progress state
       setProgress(prev => ({
         ...prev,
         endTime: new Date(),
@@ -205,24 +295,59 @@ export default function ExerciseDetailScreen() {
       setIsTimerRunning(false);
       setIsResting(false);
 
+      // Show success message with detailed summary
       Alert.alert(
-        'Exercise Complete!',
-        `Great job! You completed ${completedSets.length} sets in ${formatTime(timer)}.`,
+        '🎉 Exercise Complete!',
+        `Excellent work! You completed ${completedSets.length} set${completedSets.length > 1 ? 's' : ''} in ${formatTime(timer)} and burned approximately ${finalCalories} calories.`,
         [
           { 
-            text: 'View Progress', 
-            onPress: () => router.push('/progress') 
+            text: 'View Progress',
+            style: 'default',
+            onPress: () => {
+              router.push('/progress');
+            }
           },
           { 
-            text: 'OK', 
-            onPress: () => router.back() 
+            text: 'Back to Workouts',
+            style: 'default',
+            onPress: () => {
+              router.back();
+            }
           }
         ]
       );
+      
     } catch (err) {
       console.error('Error finishing exercise:', err);
+      
+        'Error Saving Exercise',
+        `We couldn't save your exercise progress: ${errorMessage}. Your workout data may not be saved. Please try again or contact support if the problem persists.`,
+        [
+          {
+            text: 'Retry',
+            style: 'default',
+            onPress: () => finishExerciseConfirmed(completedSets)
+          },
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          }
+        ]
       Alert.alert('Error', 'Failed to save exercise progress');
+    } finally {
+      setIsSaving(false);
     }
+  };
+
+  const calculateCalories = (durationMinutes: number, difficulty: string) => {
+    const baseCaloriesPerMinute = 8; // Base calories per minute
+    const difficultyMultiplier = {
+      'beginner': 0.8,
+      'intermediate': 1.0,
+      'advanced': 1.3
+    }[difficulty] || 1.0;
+    
+    return Math.round(durationMinutes * baseCaloriesPerMinute * difficultyMultiplier);
   };
 
   const handleSetComplete = (setIndex: number) => {
@@ -428,10 +553,14 @@ export default function ExerciseDetailScreen() {
                 <TouchableOpacity 
                   style={styles.completeButton}
                   onPress={() => handleSetComplete(index)}
+                  accessibilityLabel={`Decrease reps for set ${set.setNumber}`}
+                  accessibilityRole="button"
                 >
                   {set.completed ? (
                     <CheckCircle size={20} color="#059669" />
                   ) : (
+                  accessibilityLabel={`Increase reps for set ${set.setNumber}`}
+                  accessibilityRole="button"
                     <Circle size={20} color="#94A3B8" />
                   )}
                 </TouchableOpacity>
@@ -452,6 +581,8 @@ export default function ExerciseDetailScreen() {
                 <View style={styles.inputContainer}>
                   <TouchableOpacity 
                     style={styles.inputButton}
+                  accessibilityLabel={`Decrease weight for set ${set.setNumber}`}
+                  accessibilityRole="button"
                     onPress={() => updateSetValue(index, 'reps', set.reps - 1)}
                   >
                     <Minus size={16} color="#64748B" />
@@ -494,11 +625,17 @@ export default function ExerciseDetailScreen() {
                   >
                     <Minus size={16} color="#64748B" />
                   </TouchableOpacity>
+                  accessibilityLabel={`Decrease rest time for set ${set.setNumber}`}
+                  accessibilityRole="button"
                   <Text style={styles.inputValue}>{set.restTime}</Text>
                   <TouchableOpacity 
                     style={styles.inputButton}
                     onPress={() => updateSetValue(index, 'restTime', set.restTime + 15)}
                   >
+                  accessibilityLabel={`Increase weight for set ${set.setNumber}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Increase rest time for set ${set.setNumber}`}
+                  accessibilityRole="button"
                     <Plus size={16} color="#64748B" />
                   </TouchableOpacity>
                 </View>
@@ -518,6 +655,8 @@ export default function ExerciseDetailScreen() {
           onChangeText={(text) => setProgress(prev => ({ ...prev, notes: text }))}
           multiline
           numberOfLines={3}
+          accessibilityLabel="Exercise notes"
+          accessibilityHint="Add any notes about your workout performance or observations"
         />
       </View>
     </View>
@@ -568,6 +707,9 @@ export default function ExerciseDetailScreen() {
             <TouchableOpacity 
               style={styles.startButton}
               onPress={handleStartExercise}
+              accessibilityLabel="Start exercise session"
+              accessibilityRole="button"
+              accessibilityHint="Begin tracking your exercise sets and time"
             >
               <Play size={20} color="#FFFFFF" />
               <Text style={styles.startButtonText}>Start Exercise</Text>
@@ -579,6 +721,8 @@ export default function ExerciseDetailScreen() {
               <TouchableOpacity 
                 style={styles.pauseButton}
                 onPress={isTimerRunning ? handlePauseExercise : handleResumeExercise}
+                accessibilityLabel={isTimerRunning ? "Pause exercise" : "Resume exercise"}
+                accessibilityRole="button"
               >
                 {isTimerRunning ? (
                   <>
@@ -594,11 +738,27 @@ export default function ExerciseDetailScreen() {
               </TouchableOpacity>
               
               <TouchableOpacity 
-                style={styles.finishButton}
+                style={[
+                  styles.finishButton,
+                  isSaving && styles.finishButtonDisabled
+                ]}
                 onPress={handleFinishExercise}
+                disabled={isSaving}
+                accessibilityLabel="Finish exercise and save progress"
+                accessibilityRole="button"
+                accessibilityHint="Saves your completed sets and ends the exercise session"
               >
-                <Square size={20} color="#FFFFFF" />
-                <Text style={styles.finishButtonText}>Finish Exercise</Text>
+                {isSaving ? (
+                  <>
+                    <ActivityIndicator size={20} color="#FFFFFF" />
+                    <Text style={styles.finishButtonText}>Saving...</Text>
+                  </>
+                ) : (
+                  <>
+                    <Square size={20} color="#FFFFFF" />
+                    <Text style={styles.finishButtonText}>Finish Exercise</Text>
+                  </>
+                )}
               </TouchableOpacity>
             </View>
           )}
@@ -1038,6 +1198,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
     color: '#FFFFFF',
+  },
+  finishButtonDisabled: {
+    backgroundColor: '#94A3B8',
+    opacity: 0.7,
   },
   completedSection: {
     alignItems: 'center',

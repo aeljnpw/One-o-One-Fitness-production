@@ -32,8 +32,8 @@ export default function SignInScreen() {
       if (error) throw error;
 
       if (data.user) {
-        // Navigate to main app
-        router.replace('/(tabs)');
+        // Navigation will be handled by the auth state listener in _layout.tsx
+        console.log('Sign in successful');
       }
     } catch (error) {
       console.error('Sign in error:', error);

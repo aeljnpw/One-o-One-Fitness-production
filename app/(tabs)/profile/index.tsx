@@ -41,14 +41,32 @@ export default function ProfileScreen() {
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching profile:', error);
         return;
       }
 
-      setProfile(data);
+      if (data) {
+        setProfile(data);
+      } else {
+        // No profile found, create a default one for display
+        const defaultProfile = {
+          id: user.id,
+          name: user.user_metadata?.name || null,
+          email: user.email || null,
+          bio: null,
+          avatar_url: null,
+          level: 'Beginner',
+          workouts_completed: 0,
+          total_calories: 0,
+          current_streak: 0,
+          longest_streak: 0,
+          created_at: new Date().toISOString(),
+        };
+        setProfile(defaultProfile);
+      }
     } catch (error) {
       console.error('Error fetching profile:', error);
     } finally {
@@ -106,6 +124,8 @@ export default function ProfileScreen() {
 
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      
+      // Navigation will be handled by the auth state listener in _layout.tsx
     } catch (error) {
       console.error('Sign out error:', error);
       Alert.alert('Error', error instanceof Error ? error.message : 'Failed to sign out');

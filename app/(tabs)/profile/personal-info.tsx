@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Save, User, Mail, Phone, Calendar, MapPin, Ruler, Weight } from 'lucide-react-native';
+import { ArrowLeft, Save, User, Mail, Target } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { getSupabase } from '@/lib/supabase';
 
@@ -45,18 +45,41 @@ export default function PersonalInfoScreen() {
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching profile:', error);
         return;
       }
 
-      setPersonalInfo(data);
-      setName(data.name || '');
-      setEmail(data.email || '');
-      setBio(data.bio || '');
-      setLevel(data.level || 'Beginner');
+      if (data) {
+        setPersonalInfo(data);
+        setName(data.name || '');
+        setEmail(data.email || '');
+        setBio(data.bio || '');
+        setLevel(data.level || 'Beginner');
+      } else {
+        // No profile found, create a default one
+        const defaultProfile = {
+          id: user.id,
+          name: user.user_metadata?.name || '',
+          email: user.email || '',
+          bio: '',
+          level: 'Beginner',
+          workouts_completed: 0,
+          total_calories: 0,
+          current_streak: 0,
+          longest_streak: 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        
+        setPersonalInfo(defaultProfile);
+        setName(defaultProfile.name);
+        setEmail(defaultProfile.email);
+        setBio(defaultProfile.bio);
+        setLevel(defaultProfile.level);
+      }
     } catch (error) {
       console.error('Error fetching personal info:', error);
     } finally {
@@ -65,24 +88,25 @@ export default function PersonalInfoScreen() {
   };
 
   const handleSave = async () => {
-    if (!personalInfo) return;
-
     setIsSaving(true);
     
     try {
       const supabase = getSupabase();
       if (!supabase) throw new Error('Supabase client not initialized');
 
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
       const { error } = await supabase
         .from('profiles')
-        .update({
+        .upsert({
+          id: user.id,
           name,
           email,
           bio,
           level,
           updated_at: new Date().toISOString(),
-        })
-        .eq('id', personalInfo.id);
+        });
 
       if (error) throw error;
 
@@ -268,12 +292,10 @@ export default function PersonalInfoScreen() {
             onPress={() => {
               setIsEditing(false);
               // Reset form fields to original values
-              if (personalInfo) {
-                setName(personalInfo.name || '');
-                setEmail(personalInfo.email || '');
-                setBio(personalInfo.bio || '');
-                setLevel(personalInfo.level || 'Beginner');
-              }
+              setName(personalInfo?.name || '');
+              setEmail(personalInfo?.email || '');
+              setBio(personalInfo?.bio || '');
+              setLevel(personalInfo?.level || 'Beginner');
             }}
           >
             <Text style={styles.cancelButtonText}>Cancel Changes</Text>
