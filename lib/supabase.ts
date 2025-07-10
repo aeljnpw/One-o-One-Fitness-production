@@ -26,7 +26,7 @@ const getEnvVar = (key: string): string => {
 
 // Get Supabase configuration
 const supabaseUrl = getEnvVar('supabaseUrl') || getEnvVar('SUPABASE_URL');
-const supabaseAnonKey = getEnvVar('supabaseKey') || getEnvVar('SUPABASE_ANON_KEY') || getEnvVar('supabaseAnonKey');
+const supabaseKey = getEnvVar('supabaseKey') || getEnvVar('SUPABASE_KEY') || getEnvVar('supabaseAnonKey');
 
 // Validate URL format
 const isValidUrl = (url: string) => {
@@ -38,9 +38,10 @@ const isValidUrl = (url: string) => {
   }
 };
 
-// Validate key format (basic check for JWT-like structure)
+// Validate key format (check for publishable key or JWT-like structure)
 const isValidKey = (key: string) => {
-  return key && key.length > 50 && !key.includes('placeholder') && key.startsWith('eyJ');
+  return key && key.length > 20 && !key.includes('placeholder') && 
+    (key.startsWith('eyJ') || key.startsWith('sb_publishable_'));
 };
 
 // Create a singleton instance
@@ -48,12 +49,12 @@ let supabaseInstance: ReturnType<typeof createClient<Database>> | null = null;
 
 export const getSupabase = () => {
   if (!supabaseInstance) {
-    if (!supabaseUrl || !supabaseAnonKey || !isValidUrl(supabaseUrl) || !isValidKey(supabaseAnonKey)) {
+    if (!supabaseUrl || !supabaseKey || !isValidUrl(supabaseUrl) || !isValidKey(supabaseKey)) {
       console.error('❌ Supabase configuration is missing:', {
         url: !supabaseUrl ? '❌ Missing' : !isValidUrl(supabaseUrl) ? '❌ Invalid format' : '✅ Valid',
-        key: !supabaseAnonKey ? '❌ Missing' : !isValidKey(supabaseAnonKey) ? '❌ Invalid format' : '✅ Valid',
+        key: !supabaseKey ? '❌ Missing' : !isValidKey(supabaseKey) ? '❌ Invalid format' : '✅ Valid',
         urlValue: supabaseUrl ? (supabaseUrl.includes('placeholder') ? 'Contains placeholder' : 'Set') : 'Not set',
-        keyValue: supabaseAnonKey ? (supabaseAnonKey.includes('placeholder') ? 'Contains placeholder' : 'Set') : 'Not set'
+        keyValue: supabaseKey ? (supabaseKey.includes('placeholder') ? 'Contains placeholder' : 'Set') : 'Not set'
       });
       
       console.warn('⚠️ Please update your .env file with valid Supabase credentials');
@@ -65,7 +66,7 @@ export const getSupabase = () => {
     try {
       console.log('🔄 Initializing Supabase client...');
       
-      supabaseInstance = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+      supabaseInstance = createClient<Database>(supabaseUrl, supabaseKey, {
         auth: {
           persistSession: true,
           autoRefreshToken: true,

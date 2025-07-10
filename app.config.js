@@ -35,7 +35,7 @@ export default {
   ],
   extra: {
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
-    supabaseKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+    supabaseKey: process.env.EXPO_PUBLIC_SUPABASE_KEY,
     eas: {
       projectId: 'your-project-id'
     }
