@@ -1,21 +1,32 @@
 import { createClient } from '@supabase/supabase-js';
 import Constants from 'expo-constants';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Database } from './types';
 
-// Get environment variables from Expo Constants
+// Get environment variables from Expo Constants with fallbacks
 const getEnvVar = (key: string): string => {
-  const value = Constants.expoConfig?.extra?.[key];
+  // Try multiple sources for environment variables
+  const sources = [
+    Constants.expoConfig?.extra?.[key],
+    Constants.manifest?.extra?.[key],
+    Constants.manifest2?.extra?.[key],
+    process.env[`EXPO_PUBLIC_${key.toUpperCase()}`],
+    process.env[key.toUpperCase()],
+  ];
+
+  const value = sources.find(v => v && typeof v === 'string');
+  
   if (!value) {
     console.warn(`⚠️ Environment variable ${key} is not set`);
+  } else {
+    console.log(`📝 ${key}: ✅ Found`);
   }
-  console.log(`📝 ${key}:`, value ? '✅ Found' : '❌ Missing');
+  
   return value || '';
 };
 
 // Get Supabase configuration
-const supabaseUrl = getEnvVar('supabaseUrl');
-const supabaseAnonKey = getEnvVar('supabaseKey');
+const supabaseUrl = getEnvVar('supabaseUrl') || getEnvVar('SUPABASE_URL');
+const supabaseAnonKey = getEnvVar('supabaseKey') || getEnvVar('SUPABASE_ANON_KEY');
 
 // Create a singleton instance
 let supabaseInstance: ReturnType<typeof createClient<Database>> | null = null;
@@ -27,61 +38,25 @@ export const getSupabase = () => {
         url: supabaseUrl ? '✅ Set' : '❌ Missing',
         key: supabaseAnonKey ? '✅ Set' : '❌ Missing'
       });
+      
+      // Return null instead of throwing to allow app to continue
       return null;
     }
 
     try {
       console.log('🔄 Initializing Supabase client...');
-      console.log('🌐 URL:', supabaseUrl);
       
-      // Create client with basic config first
       supabaseInstance = createClient<Database>(supabaseUrl, supabaseAnonKey, {
         auth: {
-          persistSession: false, // Don't persist session for now
+          persistSession: true,
           autoRefreshToken: true,
           detectSessionInUrl: false
         }
       });
 
-      // Test the connection immediately
-      void (async () => {
-        try {
-          console.log('🔍 Testing initial connection...');
-          const { data, error } = await supabaseInstance!
-            .from('equipment')
-            .select('*')
-            .limit(1);
-          
-          if (error) {
-            console.error('❌ Initial connection test failed:', {
-              message: error.message,
-              details: error.details,
-              hint: error.hint,
-              code: error.code
-            });
-            supabaseInstance = null;
-          } else {
-            console.log('✅ Initial connection test successful, data:', data);
-          }
-        } catch (error: unknown) {
-          console.error('❌ Connection test error:', {
-            error: error instanceof Error ? {
-              message: error.message,
-              stack: error.stack
-            } : error
-          });
-          supabaseInstance = null;
-        }
-      })();
-
       console.log('✅ Supabase client initialized');
     } catch (error) {
-      console.error('❌ Error initializing Supabase client:', {
-        error: error instanceof Error ? {
-          message: error.message,
-          stack: error.stack
-        } : error
-      });
+      console.error('❌ Error initializing Supabase client:', error);
       supabaseInstance = null;
     }
   }
@@ -101,36 +76,19 @@ export const testConnection = async () => {
   }
 
   try {
-    // Only test essential tables
-    const tables = ['equipment', 'exercises', 'workout_templates'] as const;
-    const results = await Promise.all(
-      tables.map(async (table) => {
-        console.log(`📊 Testing access to ${table} table...`);
-        const { data, error } = await client
-          .from(table)
-          .select('*')
-          .limit(1);
-          
-        if (error) {
-          console.error(`❌ Error accessing ${table}:`, error.message);
-          return { table, success: false, error: error.message };
-        }
-        
-        console.log(`✅ Successfully accessed ${table} table, data:`, data);
-        return { table, success: true, data };
-      })
-    );
-
-    const allSuccessful = results.every(r => r.success);
-    if (allSuccessful) {
-      console.log('✅ All table access tests passed');
-    } else {
-      console.error('❌ Some table access tests failed:', 
-        results.filter(r => !r.success).map(r => r.table).join(', ')
-      );
+    // Test with a simple query
+    const { data, error } = await client
+      .from('equipment')
+      .select('*')
+      .limit(1);
+      
+    if (error) {
+      console.error('❌ Database connection test failed:', error.message);
+      return false;
     }
-
-    return allSuccessful;
+    
+    console.log('✅ Database connection test successful');
+    return true;
   } catch (err) {
     console.error('❌ Database connection test error:', err);
     return false;

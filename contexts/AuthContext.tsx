@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '../utils/supabase';
+import { getSupabase } from '@/lib/supabase';
 
 interface AuthContextData {
   user: User | null;
@@ -21,25 +21,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check active sessions and sets the user
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    const initializeAuth = async () => {
+      try {
+        const supabase = getSupabase();
+        if (!supabase) {
+          console.warn('Supabase client not available, continuing without auth');
+          setLoading(false);
+          return;
+        }
 
-    // Listen for changes on auth state (signed in, signed out, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+        // Check active sessions and sets the user
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error getting session:', error);
+        } else {
+          setSession(session);
+          setUser(session?.user ?? null);
+        }
 
-    return () => subscription.unsubscribe();
+        // Listen for changes on auth state (signed in, signed out, etc.)
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+          setSession(session);
+          setUser(session?.user ?? null);
+        });
+
+        setLoading(false);
+
+        return () => subscription.unsubscribe();
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        setLoading(false);
+      }
+    };
+
+    initializeAuth();
   }, []);
 
   const signUp = async (email: string, password: string) => {
     try {
+      const supabase = getSupabase();
+      if (!supabase) {
+        throw new Error('Supabase client not initialized');
+      }
+
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -52,6 +77,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
+      const supabase = getSupabase();
+      if (!supabase) {
+        throw new Error('Supabase client not initialized');
+      }
+
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -64,6 +94,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
+      const supabase = getSupabase();
+      if (!supabase) {
+        throw new Error('Supabase client not initialized');
+      }
+
       await supabase.auth.signOut();
     } catch (error) {
       console.error('Error signing out:', error);
@@ -72,8 +107,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const forgotPassword = async (email: string) => {
     try {
+      const supabase = getSupabase();
+      if (!supabase) {
+        throw new Error('Supabase client not initialized');
+      }
+
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'myapp://reset-password',
+        redirectTo: 'one-o-one-fitness://reset-password',
       });
       return { error };
     } catch (error) {
@@ -83,6 +123,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updatePassword = async (newPassword: string) => {
     try {
+      const supabase = getSupabase();
+      if (!supabase) {
+        throw new Error('Supabase client not initialized');
+      }
+
       const { error } = await supabase.auth.updateUser({
         password: newPassword,
       });
@@ -114,4 +159,4 @@ export const useAuth = () => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}; 
+};
