@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Redirect, Tabs } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
-import { Home, Dumbbell, TrendingUp, User } from 'lucide-react-native';
+import { Chrome as Home, Dumbbell, TrendingUp, User } from 'lucide-react-native';
 
 export default function TabsLayout() {
   const { user, loading } = useAuth();
